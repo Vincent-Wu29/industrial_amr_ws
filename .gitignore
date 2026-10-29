@@ -1,0 +1,14 @@
+build/
+install/
+log/
+artifacts/*
+!artifacts/.gitkeep
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+/output/
+/HANDOFF.md
+.env
+.env.*
+!.env.example

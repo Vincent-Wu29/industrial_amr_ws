@@ -1,0 +1,120 @@
+{
+  "accepted_tasks": 0,
+  "task_outcomes": {},
+  "task_success_rate": null,
+  "navigation_attempts": 12,
+  "navigation_outcomes": {
+    "SUCCEEDED": 12
+  },
+  "navigation_success_rate": 1.0,
+  "successful_navigation_sim_s": {
+    "n": 12,
+    "mean": 19.21516666666667,
+    "median": 24.163,
+    "p95": 32.41
+  },
+  "successful_navigation_wall_s": {
+    "n": 12,
+    "mean": 8.824819055333288,
+    "median": 11.264111704999777,
+    "p95": 15.437705622998692
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "narrow/baseline": {
+      "n": 5,
+      "passed": 4,
+      "succeeded": 4,
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46
+      ],
+      "accepted": 4,
+      "collisions": 0,
+      "unverified_truth": 1,
+      "success_sim_s": {
+        "n": 4,
+        "mean": 30.751,
+        "median": 30.273000000000007,
+        "p95": 32.41
+      },
+      "success_wall_s": {
+        "n": 4,
+        "mean": 13.854098233749482,
+        "median": 13.415848036999705,
+        "p95": 15.439942773999064
+      },
+      "controller_cpu_s": {
+        "n": 4,
+        "mean": 3.4450000000000003,
+        "median": 3.375,
+        "p95": 3.750000000000001
+      },
+      "observed_real_time_factor": {
+        "n": 4,
+        "mean": 2.2246112425110374,
+        "median": 2.2468166185006746,
+        "p95": 2.3057106887967955
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 4,
+        "not_measured": 1
+      },
+      "path_length_m": {
+        "n": 4,
+        "mean": 8.078367832754385,
+        "median": 8.069665610952597,
+        "p95": 8.128744856507998
+      },
+      "failed_samples": [
+        {
+          "scenario": "narrow",
+          "profile": "baseline",
+          "seed": 46,
+          "passed": false,
+          "accepted": false,
+          "success": false,
+          "error": "",
+          "collision_count": null,
+          "truth_valid": false,
+          "physical_stop_verified": false,
+          "elapsed_wall_s": null,
+          "elapsed_sim_s": null,
+          "box_scan_hits": 0,
+          "observed_real_time_factor": null
+        }
+      ]
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 0,
+  "configuration_resolution": [
+    {
+      "context": "narrow navigation",
+      "requested_profile": "baseline",
+      "effective_profile": "baseline",
+      "n": 5
+    }
+  ]
+}

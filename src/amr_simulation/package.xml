@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>amr_simulation</name><version>0.1.0</version>
+  <description>Industrial AMR simulation subsystem</description>
+  <maintainer email="maintainer@example.com">AMR contributors</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>ros_gz_sim</depend><depend>ros_gz_bridge</depend><depend>gz_ros2_control</depend><depend>diff_drive_controller</depend><depend>joint_state_broadcaster</depend><depend>controller_manager</depend><depend>rclpy</depend><depend>rclcpp</depend><depend>gz_transport_vendor</depend><depend>gz_msgs_vendor</depend><depend>gz_sim_vendor</depend><depend>gz_plugin_vendor</depend><depend>ros_gz_interfaces</depend><depend>geometry_msgs</depend><depend>sensor_msgs</depend><depend>tf2_ros</depend><depend>tf2_msgs</depend><depend>nav_msgs</depend><depend>std_msgs</depend>
+  
+  <test_depend>ament_cmake_pytest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

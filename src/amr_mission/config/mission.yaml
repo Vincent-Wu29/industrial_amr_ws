@@ -1,0 +1,14 @@
+mission_manager:
+  ros__parameters:
+    use_sim_time: true
+    nav_timeout_s: 180.0
+    task_timeout_s: 420.0
+    reset_world_empty: false
+    footprint_padding: 0.12
+motion_guard:
+  ros__parameters:
+    use_sim_time: true
+    heartbeat_timeout_s: 0.6
+    command_timeout_s: 0.4
+    max_linear: 0.35
+    max_angular: 0.8

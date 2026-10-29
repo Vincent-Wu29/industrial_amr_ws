@@ -1,0 +1,476 @@
+<sdf version="1.9">
+  <world name="warehouse">
+    <physics name="physics" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+    <plugin filename="libamr_truth_system.so" name="amr::TruthSystem">
+      <model_name>amr</model_name>
+    </plugin>
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>.8 .8 .8 1</diffuse>
+      <direction>-.5 .1 -1</direction>
+    </light>
+    <model name="floor">
+      <static>true</static>
+      <pose>10 7.5 -0.05 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>24 19 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>24 19 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_0">
+      <static>true</static>
+      <pose>10 0.1 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>20 0.2 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>20 0.2 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_1">
+      <static>true</static>
+      <pose>10 14.9 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>20 0.2 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>20 0.2 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_2">
+      <static>true</static>
+      <pose>0.1 7.5 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 15 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 15 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_3">
+      <static>true</static>
+      <pose>19.9 7.5 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 15 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 15 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_4">
+      <static>true</static>
+      <pose>7 7.5 0.6 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2 7 1.2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2 7 1.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_5">
+      <static>true</static>
+      <pose>13 7.5 0.6 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2 7 1.2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2 7 1.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_6">
+      <static>true</static>
+      <pose>10 11.6 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4 0.8 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>4 0.8 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="obstacle_7">
+      <static>true</static>
+      <pose>10 13.2 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4 0.8 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>4 0.8 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_A01">
+      <static>true</static>
+      <pose>3 3 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_A02">
+      <static>true</static>
+      <pose>3 12 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_B01">
+      <static>true</static>
+      <pose>17 3 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_B02">
+      <static>true</static>
+      <pose>17 12 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_C01">
+      <static>true</static>
+      <pose>10 12.5 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="station_HOME">
+      <static>true</static>
+      <pose>2 7.5 0.004 0 0 0</pose>
+      <link name="body">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.45 0.45 0.008</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.2 .75 .5 1</ambient>
+            <diffuse>.2 .75 .5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="scenario_box">
+      <static>false</static>
+      <pose>-5 -5 0.5 0 0 0</pose>
+      <link name="body">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>100.0</mass>
+          <inertia>
+            <ixx>11.333333333333334</ixx>
+            <iyy>11.333333333333334</iyy>
+            <izz>6.0</izz>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.6 0.6 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.6 0.6 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/model/scenario_box/cmd_vel</topic>
+      </plugin>
+    </model>
+    <model name="enclosure_west">
+      <static>true</static>
+      <pose>-8 -8 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 2.4 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 2.4 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="enclosure_east">
+      <static>true</static>
+      <pose>-8 -8 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 2.4 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 2.4 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="enclosure_north">
+      <static>true</static>
+      <pose>-8 -8 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.4 0.2 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.4 0.2 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="enclosure_south">
+      <static>true</static>
+      <pose>-8 -8 0.5 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.4 0.2 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.4 0.2 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>.17 .28 .36 1</ambient>
+            <diffuse>.17 .28 .36 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

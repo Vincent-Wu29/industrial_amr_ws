@@ -1,0 +1,155 @@
+{
+  "accepted_tasks": 0,
+  "task_outcomes": {},
+  "task_success_rate": null,
+  "navigation_attempts": 6,
+  "navigation_outcomes": {
+    "SUCCEEDED": 6
+  },
+  "navigation_success_rate": 1.0,
+  "successful_navigation_sim_s": {
+    "n": 6,
+    "mean": 17.130000000000003,
+    "median": 21.287000000000003,
+    "p95": 29.274
+  },
+  "successful_navigation_wall_s": {
+    "n": 6,
+    "mean": 9.215111421833335,
+    "median": 9.858127304500002,
+    "p95": 17.925897332000005
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "narrow/baseline": {
+      "n": 1,
+      "passed": 1,
+      "succeeded": 1,
+      "seeds": [
+        45
+      ],
+      "accepted": 1,
+      "collisions": 0,
+      "unverified_truth": 0,
+      "success_sim_s": {
+        "n": 1,
+        "mean": 29.274,
+        "median": 29.274,
+        "p95": 29.274
+      },
+      "success_wall_s": {
+        "n": 1,
+        "mean": 17.929911120000014,
+        "median": 17.929911120000014,
+        "p95": 17.929911120000014
+      },
+      "controller_cpu_s": {
+        "n": 1,
+        "mean": 5.13,
+        "median": 5.13,
+        "p95": 5.13
+      },
+      "observed_real_time_factor": {
+        "n": 1,
+        "mean": 1.63269074810673,
+        "median": 1.63269074810673,
+        "p95": 1.63269074810673
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 1
+      },
+      "path_length_m": {
+        "n": 1,
+        "mean": 8.333544780335846,
+        "median": 8.333544780335846,
+        "p95": 8.333544780335846
+      },
+      "failed_samples": []
+    },
+    "narrow/candidate": {
+      "n": 1,
+      "passed": 1,
+      "succeeded": 1,
+      "seeds": [
+        45
+      ],
+      "accepted": 1,
+      "collisions": 0,
+      "unverified_truth": 0,
+      "success_sim_s": {
+        "n": 1,
+        "mean": 18.990000000000002,
+        "median": 18.990000000000002,
+        "p95": 18.990000000000002
+      },
+      "success_wall_s": {
+        "n": 1,
+        "mean": 9.87673839300001,
+        "median": 9.87673839300001,
+        "p95": 9.87673839300001
+      },
+      "controller_cpu_s": {
+        "n": 1,
+        "mean": 2.63,
+        "median": 2.63,
+        "p95": 2.63
+      },
+      "observed_real_time_factor": {
+        "n": 1,
+        "mean": 1.9226995030524325,
+        "median": 1.9226995030524325,
+        "p95": 1.9226995030524325
+      },
+      "minimum_clearance_m": {
+        "n": 1,
+        "mean": 0.21899896828470258,
+        "median": 0.21899896828470258,
+        "p95": 0.21899896828470258
+      },
+      "routes": {
+        "corridor": 1
+      },
+      "path_length_m": {
+        "n": 1,
+        "mean": 5.988123356437554,
+        "median": 5.988123356437554,
+        "p95": 5.988123356437554
+      },
+      "failed_samples": []
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 0,
+  "configuration_resolution": [
+    {
+      "context": "narrow navigation",
+      "requested_profile": "baseline",
+      "effective_profile": "baseline",
+      "n": 1
+    },
+    {
+      "context": "narrow navigation",
+      "requested_profile": "candidate",
+      "effective_profile": "candidate",
+      "n": 1
+    }
+  ]
+}

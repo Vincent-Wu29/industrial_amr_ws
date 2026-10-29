@@ -1,0 +1,40 @@
+schema_version: 1
+map_id: warehouse_v1
+frame_id: map
+stations:
+  - station_id: A01
+    type: PICKUP
+    pose: {x: 3.000000, y: 3.000000, yaw: 0.000000}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0
+  - station_id: A02
+    type: PICKUP
+    pose: {x: 3.000000, y: 12.000000, yaw: 0.000000}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0
+  - station_id: B01
+    type: DROPOFF
+    pose: {x: 17.000000, y: 3.000000, yaw: 3.141593}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0
+  - station_id: B02
+    type: DROPOFF
+    pose: {x: 17.000000, y: 12.000000, yaw: 3.141593}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0
+  - station_id: C01
+    type: BUFFER
+    pose: {x: 10.000000, y: 12.500000, yaw: 0.000000}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0
+  - station_id: HOME
+    type: HOME
+    pose: {x: 2.000000, y: 7.500000, yaw: 0.000000}
+    docking_mode: nav_only
+    load_timeout_s: 30.0
+    unload_timeout_s: 30.0

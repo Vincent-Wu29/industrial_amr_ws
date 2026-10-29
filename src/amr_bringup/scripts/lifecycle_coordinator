@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Bounded asynchronous startup, verifying state after every transition/timeout."""
+import time
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Bool
+from lifecycle_msgs.srv import GetState, ChangeState
+
+class Coordinator(Node):
+    def __init__(self):
+        super().__init__('lifecycle_coordinator')
+        mode=self.declare_parameter('mode','navigation').value
+        defaults=['slam_toolbox'] if mode=='mapping' else ['map_server','amcl','controller_server','planner_server','behavior_server','bt_navigator','collision_monitor']
+        self.targets=list(self.declare_parameter('node_names',defaults).value)
+        if not self.targets: raise ValueError('empty lifecycle targets')
+        self.budget=float(self.declare_parameter('startup_timeout_s',120.).value)
+        self.response_timeout=float(self.declare_parameter('response_timeout_s',2.).value)
+        self.physical=False; self.physical_wall=-1e12; self.localized=False; self.localized_wall=-1e12
+        self.index=0; self.pending=None; self.change=None; self.started=time.monotonic(); self.last_note=''
+        self.get_clients={n:self.create_client(GetState,f'/{n}/get_state') for n in self.targets}
+        self.change_clients={n:self.create_client(ChangeState,f'/{n}/change_state') for n in self.targets}
+        self.create_subscription(Bool,'/system/physical_ready',self.physical_cb,10)
+        self.create_subscription(Bool,'/system/localization_ready',self.localized_cb,10)
+        self.pub=self.create_publisher(Bool,'/system/lifecycle_ready',10)
+        self.create_timer(.05,self.tick,clock=rclpy.clock.Clock(clock_type=rclpy.clock.ClockType.STEADY_TIME))
+    def physical_cb(self,m): self.physical=m.data; self.physical_wall=time.monotonic()
+    def localized_cb(self,m): self.localized=m.data; self.localized_wall=time.monotonic()
+    def note(self,message):
+        if message!=self.last_note: self.get_logger().info(message); self.last_note=message
+    def request(self,kind,name,client,request):
+        if not client.service_is_ready(): self.note('waiting for '+name+' lifecycle service'); return
+        self.pending=(kind,name,client,client.call_async(request),time.monotonic())
+    def tick(self):
+        if self.index==len(self.targets): self.pub.publish(Bool(data=True)); return
+        self.pub.publish(Bool(data=False)); now=time.monotonic()
+        if now-self.started>=self.budget: raise TimeoutError('lifecycle startup deadline at '+self.targets[self.index]+'; '+self.last_note)
+        if self.pending:
+            kind,name,client,future,started=self.pending
+            if not future.done():
+                if now-started<self.response_timeout: return
+                client.remove_pending_request(future); self.pending=None; self.change=None
+                self.note(name+' response deadline; rechecking actual state')
+                return
+            self.pending=None
+            try: response=future.result()
+            except Exception as error: self.note(name+' response error: '+str(error)); self.change=None; return
+            if kind=='change':
+                self.note(name+(' transition acknowledged; verifying' if response.success else ' transition rejected; rechecking'))
+                self.change=None; return
+            state=response.current_state.id
+            if state==3: self.note(name+' ACTIVE'); self.index+=1; self.change=None; return
+            if state==1: self.change=1
+            elif state==2: self.change=3
+            else: self.note(name+' transitional state '+str(state)); self.change=None; return
+        if not self.physical or now-self.physical_wall>1:
+            self.note('waiting for controllers, sensors, clock and odom TF'); return
+        name=self.targets[self.index]
+        if name=='controller_server' and (not self.localized or now-self.localized_wall>1):
+            self.note('waiting for map/AMCL/TF localization'); return
+        if self.change is not None:
+            request=ChangeState.Request(); request.transition.id=self.change
+            self.note(name+' request transition '+str(self.change))
+            self.request('change',name,self.change_clients[name],request)
+        else: self.request('get',name,self.get_clients[name],GetState.Request())
+
+def main():
+    rclpy.init(); node=None
+    try: node=Coordinator(); rclpy.spin(node)
+    except KeyboardInterrupt: pass
+    except Exception as error:
+        if node: node.get_logger().fatal(str(error))
+        return 1
+    finally:
+        if node: node.destroy_node()
+        rclpy.try_shutdown()
+    return 0
+if __name__=='__main__': raise SystemExit(main())

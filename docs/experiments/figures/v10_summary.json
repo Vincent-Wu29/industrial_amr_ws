@@ -1,0 +1,183 @@
+{
+  "scope": "Fixed narrow_aisle navigation experiment; warehouse system policy uses baseline.",
+  "formal": {
+    "narrow/baseline": {
+      "n": 30,
+      "passed": 30,
+      "succeeded": 30,
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "accepted": 30,
+      "collisions": 0,
+      "unverified_truth": 0,
+      "success_sim_s": {
+        "n": 30,
+        "mean": 29.60386666666667,
+        "median": 29.407999999999998,
+        "p95": 33.092
+      },
+      "success_wall_s": {
+        "n": 30,
+        "mean": 13.426634076299994,
+        "median": 13.234711012499929,
+        "p95": 14.706667039000195
+      },
+      "controller_cpu_s": {
+        "n": 30,
+        "mean": 3.366,
+        "median": 3.295,
+        "p95": 3.93
+      },
+      "observed_real_time_factor": {
+        "n": 30,
+        "mean": 2.2123258061780207,
+        "median": 2.256437433444688,
+        "p95": 2.3640691100039484
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 30
+      },
+      "path_length_m": {
+        "n": 30,
+        "mean": 8.29740629503465,
+        "median": 8.294528651565443,
+        "p95": 8.340164803802105
+      },
+      "failed_samples": []
+    },
+    "narrow/candidate": {
+      "n": 30,
+      "passed": 30,
+      "succeeded": 30,
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "accepted": 30,
+      "collisions": 0,
+      "unverified_truth": 0,
+      "success_sim_s": {
+        "n": 30,
+        "mean": 19.116666666666667,
+        "median": 19.111,
+        "p95": 19.414
+      },
+      "success_wall_s": {
+        "n": 30,
+        "mean": 8.801675887499975,
+        "median": 8.644975073500063,
+        "p95": 9.716082260999883
+      },
+      "controller_cpu_s": {
+        "n": 30,
+        "mean": 2.1816666666666666,
+        "median": 2.105,
+        "p95": 2.5300000000000002
+      },
+      "observed_real_time_factor": {
+        "n": 30,
+        "mean": 2.179201821645647,
+        "median": 2.2202490728788433,
+        "p95": 2.299952790221527
+      },
+      "minimum_clearance_m": {
+        "n": 30,
+        "mean": 0.22137214878988687,
+        "median": 0.2215443004951971,
+        "p95": 0.2288005935379035
+      },
+      "routes": {
+        "corridor": 30
+      },
+      "path_length_m": {
+        "n": 30,
+        "mean": 6.017949616058922,
+        "median": 6.009176896910789,
+        "p95": 6.067444396621779
+      },
+      "failed_samples": []
+    }
+  },
+  "comparison": {
+    "improvement_percent": 41.33325274990934,
+    "paired_sample_gate": true,
+    "safety_gate": true,
+    "success_rate_gate": true,
+    "simulation_time_gate": true,
+    "meets_target": true
+  },
+  "minimum_candidate_side_clearance_m": 0.20961103549876703,
+  "formal_physical_stop_all_verified": true,
+  "artifact_sha256": {
+    "v10_paired.png": "26e31f837442784a196d6d7b1b857c735bd2282a95d12ef3a8405d4d9cac0221",
+    "v10_samples.csv": "3a0390df8575629d5dc661356928d8607778bdab6ee38fbf6a146d9f3eeb3cd9",
+    "v10_routes.png": "3e9f5601a1e58b84ef4d14e2fbdf30765c16cd0a2660ece8e14754f03e1e36cb",
+    "v10_costmaps.png": "9aa469d84187f2cdb679c1ebf0c5f508ba3cbcae816ebb97f5ee341ec55c5edb",
+    "v10_acceptance_audit.json": "2c4d9eee0dc717e3feed868e422c3d74cb1803989047eec6d4052d7730d61760",
+    "v10_candidate_nav2.yaml": "ee9355f35db16616b768d1d9a1c017d2e617beff54731309c40f15ba12076115"
+  }
+}

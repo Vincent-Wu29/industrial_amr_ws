@@ -1,0 +1,11 @@
+free_thresh: 0.196
+image: mapped_warehouse_v1.pgm
+map_id: mapped_warehouse_v1
+mode: trinary
+negate: 0
+occupied_thresh: 0.65
+origin:
+- 0.15599999999999992
+- 0.17100000000000026
+- 0
+resolution: 0.05

@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Sequential real NavigateToPose goals. Fails closed on any unsuccessful leg."""
+import argparse
+import json
+import math
+from pathlib import Path
+import sys
+import time
+import yaml
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from rclpy.parameter import Parameter
+from std_msgs.msg import Bool
+from nav2_msgs.action import NavigateToPose
+from ament_index_python.packages import get_package_share_directory
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--stations',nargs='+',default=['A01','B02','HOME'])
+    parser.add_argument('--stations-file',default=str(Path(get_package_share_directory('amr_mission'))/'config/stations.yaml'))
+    parser.add_argument('--repeat',type=int,default=5)
+    parser.add_argument('--timeout',type=float,default=360)
+    parser.add_argument('--output',default='artifacts/navigation_smoke.json')
+    args=parser.parse_args(rclpy.utilities.remove_ros_args()[1:]); rclpy.init()
+    node=Node('navigation_smoke',parameter_overrides=[Parameter('use_sim_time',value=True)])
+    stations={s['station_id']:s for s in yaml.safe_load(Path(args.stations_file).read_text())['stations']}
+    ready=[False]; node.create_subscription(Bool,'/system/ready',lambda m:ready.__setitem__(0,m.data),10)
+    client=ActionClient(node,NavigateToPose,'/navigate_to_pose'); records=[]
+    output=Path(args.output); output.parent.mkdir(parents=True,exist_ok=True)
+    def wait(f,timeout):
+        rclpy.spin_until_future_complete(node,f,timeout_sec=timeout)
+        if not f.done(): raise TimeoutError('action response/result deadline')
+        return f.result()
+    try:
+        deadline=time.monotonic()+120
+        while (not ready[0] or not client.server_is_ready()) and time.monotonic()<deadline: rclpy.spin_once(node,timeout_sec=.1)
+        if not ready[0]: raise TimeoutError('system readiness deadline')
+        for run in range(args.repeat):
+            for sid in args.stations:
+                pose=stations[sid]['pose']; goal=NavigateToPose.Goal(); goal.pose.header.frame_id='map'; goal.pose.header.stamp=node.get_clock().now().to_msg()
+                goal.pose.pose.position.x=float(pose['x']); goal.pose.pose.position.y=float(pose['y'])
+                goal.pose.pose.orientation.z=math.sin(pose['yaw']/2); goal.pose.pose.orientation.w=math.cos(pose['yaw']/2)
+                wall=time.monotonic(); sim=node.get_clock().now().nanoseconds*1e-9
+                record={'repeat':run,'station':sid,'success':False,'outcome':'unknown'}; records.append(record)
+                handle=wait(client.send_goal_async(goal),10)
+                if not handle.accepted: record['outcome']='rejected'; raise RuntimeError('Nav2 rejected '+sid)
+                try: result=wait(handle.get_result_async(),args.timeout)
+                except TimeoutError:
+                    wait(handle.cancel_goal_async(),5); record['outcome']='timeout'; raise
+                record.update(success=result.status==4 and result.result.error_code==0,outcome=str(result.status),nav_error=result.result.error_code,
+                    elapsed_wall_s=time.monotonic()-wall,elapsed_sim_s=node.get_clock().now().nanoseconds*1e-9-sim)
+                print(json.dumps(record),flush=True)
+                if not record['success']: raise RuntimeError('navigation leg failed: '+sid)
+        return 0
+    except Exception as error: print(str(error),file=sys.stderr); return 1
+    finally:
+        output.write_text(json.dumps(records,indent=2),encoding='utf-8'); node.destroy_node(); rclpy.try_shutdown()
+if __name__=='__main__': sys.exit(main())

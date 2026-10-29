@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>amr_bringup</name><version>0.1.0</version>
+  <description>Industrial AMR bringup subsystem</description>
+  <maintainer email="maintainer@example.com">AMR contributors</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>amr_description</depend><depend>amr_simulation</depend><depend>amr_navigation</depend><depend>amr_mission</depend><depend>amr_interfaces</depend><depend>nav2_msgs</depend><depend>rclpy</depend><depend>launch_ros</depend><depend>xacro</depend><depend>python3-yaml</depend><depend>lifecycle_msgs</depend><depend>controller_manager_msgs</depend><depend>sensor_msgs</depend><depend>nav_msgs</depend><depend>tf2_ros</depend><depend>rosgraph_msgs</depend><depend>std_msgs</depend><depend>std_srvs</depend><depend>diagnostic_msgs</depend>
+  
+  <exec_depend>nav2_collision_monitor</exec_depend>
+  <exec_depend>rmw_cyclonedds_cpp</exec_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

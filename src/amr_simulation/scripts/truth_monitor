@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Independent Gazebo truth + oriented footprint geometry collision monitor."""
+import json
+import math
+from pathlib import Path
+import time
+import rclpy
+from rclpy.node import Node
+from tf2_msgs.msg import TFMessage
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import UInt32, Bool
+from sensor_msgs.msg import LaserScan
+from rclpy.qos import qos_profile_sensor_data
+
+BOXES=[(10,.1,20,.2),(10,14.9,20,.2),(.1,7.5,.2,15),(19.9,7.5,.2,15),(7,7.5,2,7),(13,7.5,2,7)]
+
+def intersects(x,y,yaw,box):
+    bx,by,sx,sy=box
+    c,s=math.cos(yaw),math.sin(yaw)
+    robot=[(x+a*c-b*s,y+a*s+b*c) for a,b in [(.2,.15),(.2,-.15),(-.2,-.15),(-.2,.15)]]
+    obstacle=[(bx+dx*sx/2,by+dy*sy/2) for dx,dy in [(1,1),(1,-1),(-1,-1),(-1,1)]]
+    for ax,ay in [(1,0),(0,1),(c,s),(-s,c)]:
+        p=[px*ax+py*ay for px,py in robot]; q=[px*ax+py*ay for px,py in obstacle]
+        if max(p)<min(q) or max(q)<min(p): return False
+    return True
+
+class TruthMonitor(Node):
+    def __init__(self):
+        super().__init__('truth_monitor')
+        world=self.declare_parameter('world','warehouse').value
+        directory=Path(self.declare_parameter('artifacts_dir','artifacts').value); directory.mkdir(parents=True,exist_ok=True)
+        self.log=(directory/'truth.jsonl').open('a',encoding='utf-8',buffering=1)
+        self.obstacle_log=(directory/'obstacle_truth.jsonl').open('a',encoding='utf-8',buffering=1)
+        self.scan_log=(directory/'obstacle_lidar_evidence.jsonl').open('a',encoding='utf-8',buffering=1)
+        self.boxes=list(BOXES)
+        if world=='narrow_aisle': self.boxes += [(10,11.6,4,.8),(10,13.2,4,.8)]
+        self.fixtures={'scenario_box':(-5,-5,.6,.6)}; self.count=0; self.contact=False; self.seen=-1e12
+        self.robot=None; self.box_scan_hits=0
+        self.pub=self.create_publisher(PoseStamped,'/ground_truth/pose',10)
+        self.collisions=self.create_publisher(UInt32,'/ground_truth/collision_count',10)
+        self.valid=self.create_publisher(Bool,'/ground_truth/valid',10)
+        self.scan_hits=self.create_publisher(UInt32,'/ground_truth/box_scan_hits',10)
+        self.create_subscription(TFMessage,'/ground_truth/poses',self.poses,10)
+        self.create_subscription(LaserScan,'/scan',self.scan,qos_profile_sensor_data)
+        self.create_timer(.2,self.tick,clock=rclpy.clock.Clock(clock_type=rclpy.clock.ClockType.STEADY_TIME))
+    def box(self,m):
+        name=m.child_frame_id
+        sx,sy=(.2,2.4) if name in ('enclosure_west','enclosure_east') else (2.4,.2) if name in ('enclosure_north','enclosure_south') else (.6,.6)
+        value=(m.transform.translation.x,m.transform.translation.y,sx,sy)
+        previous=self.fixtures.get(name)
+        self.fixtures[name]=value
+        if previous is None or math.hypot(value[0]-previous[0],value[1]-previous[1])>1e-5:
+            self.obstacle_log.write(json.dumps({'sim_s':m.header.stamp.sec+m.header.stamp.nanosec*1e-9,'wall_s':time.monotonic(),
+                'fixture':name,'x':value[0],'y':value[1]})+'\n')
+    def poses(self,m):
+        for transform in m.transforms:
+            if transform.child_frame_id=='scenario_box' or transform.child_frame_id.startswith('enclosure_'): self.box(transform)
+        for transform in m.transforms:
+            if transform.child_frame_id not in ('amr','industrial_amr') and not transform.child_frame_id.endswith('/amr'): continue
+            self.seen=time.monotonic()
+            p=PoseStamped(); p.header=transform.header; p.header.frame_id='world'
+            t=transform.transform; p.pose.position.x=t.translation.x; p.pose.position.y=t.translation.y; p.pose.position.z=t.translation.z; p.pose.orientation=t.rotation
+            self.pub.publish(p)
+            q=t.rotation; yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+            self.robot=(t.translation.x,t.translation.y,yaw,transform.header.stamp.sec+transform.header.stamp.nanosec*1e-9)
+            contact=any(intersects(t.translation.x,t.translation.y,yaw,b) for b in self.boxes+list(self.fixtures.values()))
+            if contact and not self.contact: self.count+=1
+            self.contact=contact
+            self.log.write(json.dumps({'sim_s':self.get_clock().now().nanoseconds*1e-9,'source_sim_s':transform.header.stamp.sec+transform.header.stamp.nanosec*1e-9,'wall_s':time.monotonic(),'x':t.translation.x,'y':t.translation.y,'yaw':yaw,'collision':contact,'collision_count':self.count})+'\n')
+    def scan(self,m):
+        if not self.robot or not m.ranges or m.angle_increment<=0: return
+        x,y,yaw,pose_stamp=self.robot; stamp=m.header.stamp.sec+m.header.stamp.nanosec*1e-9
+        if abs(stamp-pose_stamp)>.15: return
+        bx,by,_,_=self.fixtures['scenario_box']
+        if not (0<bx<20 and 0<by<15): return
+        dx,dy=bx-x,by-y; distance=math.hypot(dx,dy)
+        if distance<.4 or distance>4: return
+        world_angle=math.atan2(dy,dx); bearing=math.remainder(world_angle-yaw,2*math.pi)
+        index=round((bearing-m.angle_min)/m.angle_increment)
+        if not 0<=index<len(m.ranges): return
+        expected=distance-.3/max(abs(math.cos(world_angle)),abs(math.sin(world_angle)))
+        measured=m.ranges[index]; matched=math.isfinite(measured) and abs(measured-expected)<.15
+        if matched: self.box_scan_hits+=1
+        self.scan_log.write(json.dumps({'sim_s':stamp,'expected_range_m':expected,'measured_range_m':measured if math.isfinite(measured) else None,'matched':matched})+'\n')
+    def tick(self):
+        self.collisions.publish(UInt32(data=self.count)); self.valid.publish(Bool(data=time.monotonic()-self.seen<1))
+        self.scan_hits.publish(UInt32(data=self.box_scan_hits))
+
+def main():
+    rclpy.init(); node=TruthMonitor()
+    try: rclpy.spin(node)
+    except KeyboardInterrupt: pass
+    finally: node.log.close(); node.obstacle_log.close(); node.scan_log.close(); node.destroy_node(); rclpy.try_shutdown()
+if __name__=='__main__': main()

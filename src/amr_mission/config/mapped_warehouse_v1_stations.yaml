@@ -1,0 +1,58 @@
+frame_id: map
+map_id: mapped_warehouse_v1
+schema_version: 1
+stations:
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 3.0
+    y: 3.0
+    yaw: 0.0
+  station_id: A01
+  type: PICKUP
+  unload_timeout_s: 30.0
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 3.0
+    y: 12.0
+    yaw: 0.0
+  station_id: A02
+  type: PICKUP
+  unload_timeout_s: 30.0
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 17.0
+    y: 3.0
+    yaw: 3.141593
+  station_id: B01
+  type: DROPOFF
+  unload_timeout_s: 30.0
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 17.0
+    y: 12.0
+    yaw: 3.141593
+  station_id: B02
+  type: DROPOFF
+  unload_timeout_s: 30.0
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 10.0
+    y: 12.5
+    yaw: 0.0
+  station_id: C01
+  type: BUFFER
+  unload_timeout_s: 30.0
+- docking_mode: nav_only
+  load_timeout_s: 30.0
+  pose:
+    x: 2.0
+    y: 7.5
+    yaw: 0.0
+  station_id: HOME
+  type: HOME
+  unload_timeout_s: 30.0

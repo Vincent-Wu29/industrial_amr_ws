@@ -1,0 +1,144 @@
+{
+  "accepted_tasks": 0,
+  "task_outcomes": {},
+  "task_success_rate": null,
+  "navigation_attempts": 63,
+  "navigation_outcomes": {
+    "SUCCEEDED": 62,
+    "FAILED": 1
+  },
+  "navigation_success_rate": 0.9841269841269841,
+  "successful_navigation_sim_s": {
+    "n": 62,
+    "mean": 18.962870967741935,
+    "median": 24.271,
+    "p95": 30.28
+  },
+  "successful_navigation_wall_s": {
+    "n": 62,
+    "mean": 9.14638261988709,
+    "median": 11.169308814500027,
+    "p95": 16.39074929100002
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "narrow/baseline": {
+      "n": 21,
+      "passed": 20,
+      "succeeded": 20,
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62
+      ],
+      "accepted": 21,
+      "collisions": 0,
+      "unverified_truth": 1,
+      "success_sim_s": {
+        "n": 20,
+        "mean": 30.0513,
+        "median": 30.031000000000002,
+        "p95": 30.432000000000002
+      },
+      "success_wall_s": {
+        "n": 20,
+        "mean": 14.634651744549966,
+        "median": 13.665835006999941,
+        "p95": 19.06443857599993
+      },
+      "controller_cpu_s": {
+        "n": 20,
+        "mean": 3.7025,
+        "median": 3.3599999999999994,
+        "p95": 5.06
+      },
+      "observed_real_time_factor": {
+        "n": 20,
+        "mean": 2.09041409941122,
+        "median": 2.200761379088467,
+        "p95": 2.299646967200975
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 20,
+        "not_measured": 1
+      },
+      "path_length_m": {
+        "n": 20,
+        "mean": 8.05579027953208,
+        "median": 8.059656534479696,
+        "p95": 8.102270984887467
+      },
+      "failed_samples": [
+        {
+          "scenario": "narrow",
+          "profile": "baseline",
+          "seed": 62,
+          "passed": false,
+          "accepted": true,
+          "success": false,
+          "error": "RuntimeError: narrow navigation failed",
+          "collision_count": 0,
+          "truth_valid": false,
+          "physical_stop_verified": false,
+          "elapsed_wall_s": null,
+          "elapsed_sim_s": null,
+          "diagnostics": {
+            "system/readiness": "READY",
+            "controller_manager: Controllers Activity": "\nHigh execution jitter or mean error : [ joint_state_broadcaster ]",
+            "controller_manager: Hardware Components Activity": "All hardware components are active",
+            "controller_manager: Controller Manager Activity": "Controller Manager is running"
+          },
+          "truth_samples": 1825,
+          "box_scan_hits": 0,
+          "observed_real_time_factor": null
+        }
+      ]
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 0,
+  "configuration_resolution": [
+    {
+      "context": "narrow navigation",
+      "requested_profile": "baseline",
+      "effective_profile": "baseline",
+      "n": 21
+    }
+  ]
+}

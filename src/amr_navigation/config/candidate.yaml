@@ -1,0 +1,11 @@
+# Global-only hypothesis: lower static costs and near-field marking avoid phantom barriers.
+# Local 5 m sensing, safety checks, physical footprint and padding remain identical.
+# Scope: narrow_aisle navigation only; warehouse missions resolve to baseline.
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      inflation_layer:
+        cost_scaling_factor: 40.0
+      obstacle_layer:
+        scan:
+          obstacle_max_range: 1.0

@@ -1,0 +1,213 @@
+{
+  "accepted_tasks": 0,
+  "task_outcomes": {},
+  "task_success_rate": null,
+  "navigation_attempts": 102,
+  "navigation_outcomes": {
+    "SUCCEEDED": 101,
+    "FAILED": 1
+  },
+  "navigation_success_rate": 0.9901960784313726,
+  "successful_navigation_sim_s": {
+    "n": 101,
+    "mean": 18.20857425742574,
+    "median": 23.494,
+    "p95": 29.553999999999995
+  },
+  "successful_navigation_wall_s": {
+    "n": 101,
+    "mean": 8.824483624425744,
+    "median": 11.065233074999924,
+    "p95": 15.913937293000004
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "narrow/baseline": {
+      "n": 30,
+      "passed": 30,
+      "succeeded": 30,
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "accepted": 30,
+      "collisions": 0,
+      "unverified_truth": 0,
+      "success_sim_s": {
+        "n": 30,
+        "mean": 29.273533333333333,
+        "median": 29.34,
+        "p95": 29.799999999999997
+      },
+      "success_wall_s": {
+        "n": 30,
+        "mean": 14.380644809366657,
+        "median": 14.376340945999885,
+        "p95": 16.124361237000016
+      },
+      "controller_cpu_s": {
+        "n": 30,
+        "mean": 3.672,
+        "median": 3.5949999999999998,
+        "p95": 4.45
+      },
+      "observed_real_time_factor": {
+        "n": 30,
+        "mean": 2.0488991136109465,
+        "median": 2.021581417262249,
+        "p95": 2.3156769189405444
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 30
+      },
+      "path_length_m": {
+        "n": 30,
+        "mean": 8.29979986531736,
+        "median": 8.29762543032686,
+        "p95": 8.342566695185074
+      },
+      "failed_samples": []
+    },
+    "narrow/candidate": {
+      "n": 4,
+      "passed": 3,
+      "succeeded": 3,
+      "seeds": [
+        42,
+        43,
+        44,
+        45
+      ],
+      "accepted": 4,
+      "collisions": 0,
+      "unverified_truth": 1,
+      "success_sim_s": {
+        "n": 3,
+        "mean": 19.354666666666667,
+        "median": 19.042,
+        "p95": 20.013999999999996
+      },
+      "success_wall_s": {
+        "n": 3,
+        "mean": 8.559255715666572,
+        "median": 8.627556025999866,
+        "p95": 8.644933306999974
+      },
+      "controller_cpu_s": {
+        "n": 3,
+        "mean": 2.0633333333333335,
+        "median": 2.0700000000000003,
+        "p95": 2.09
+      },
+      "observed_real_time_factor": {
+        "n": 3,
+        "mean": 2.2612559334994695,
+        "median": 2.265481334630433,
+        "p95": 2.315113291133694
+      },
+      "minimum_clearance_m": {
+        "n": 3,
+        "mean": 0.21213083121342538,
+        "median": 0.21541840224440645,
+        "p95": 0.21685609275514436
+      },
+      "routes": {
+        "corridor": 3,
+        "not_measured": 1
+      },
+      "path_length_m": {
+        "n": 3,
+        "mean": 6.027609465070227,
+        "median": 6.025425863256837,
+        "p95": 6.062717187102281
+      },
+      "failed_samples": [
+        {
+          "scenario": "narrow",
+          "profile": "candidate",
+          "seed": 45,
+          "passed": false,
+          "accepted": true,
+          "success": false,
+          "error": "RuntimeError: narrow navigation failed",
+          "collision_count": 0,
+          "truth_valid": false,
+          "physical_stop_verified": false,
+          "elapsed_wall_s": null,
+          "elapsed_sim_s": null,
+          "diagnostics": {
+            "system/readiness": "READY",
+            "controller_manager: Controllers Activity": "\nHigh execution jitter or mean error : [ diff_drive_controller joint_state_broadcaster ]",
+            "controller_manager: Hardware Components Activity": "All hardware components are active",
+            "controller_manager: Controller Manager Activity": "Controller Manager is running"
+          },
+          "truth_samples": 2094,
+          "box_scan_hits": 0,
+          "observed_real_time_factor": null
+        }
+      ]
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 0,
+  "configuration_resolution": [
+    {
+      "context": "narrow navigation",
+      "requested_profile": "baseline",
+      "effective_profile": "baseline",
+      "n": 30
+    },
+    {
+      "context": "narrow navigation",
+      "requested_profile": "candidate",
+      "effective_profile": "candidate",
+      "n": 4
+    }
+  ]
+}

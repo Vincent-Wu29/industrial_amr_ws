@@ -1,0 +1,130 @@
+{
+  "accepted_tasks": 1,
+  "task_outcomes": {
+    "FAILED": 1
+  },
+  "task_success_rate": 0.0,
+  "navigation_attempts": 2,
+  "navigation_outcomes": {
+    "SUCCEEDED": 1,
+    "FAILED": 1
+  },
+  "navigation_success_rate": 0.5,
+  "successful_navigation_sim_s": {
+    "n": 1,
+    "mean": 18.990000000000002,
+    "median": 18.990000000000002,
+    "p95": 18.990000000000002
+  },
+  "successful_navigation_wall_s": {
+    "n": 1,
+    "mean": 20.552138838,
+    "median": 20.552138838,
+    "p95": 20.552138838
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "happy/candidate": {
+      "n": 1,
+      "passed": 0,
+      "succeeded": 0,
+      "seeds": [
+        42
+      ],
+      "accepted": 1,
+      "collisions": 0,
+      "unverified_truth": 1,
+      "success_sim_s": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "success_wall_s": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "controller_cpu_s": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "observed_real_time_factor": {
+        "n": 1,
+        "mean": 0.9281153486317297,
+        "median": 0.9281153486317297,
+        "p95": 0.9281153486317297
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "not_measured": 1
+      },
+      "path_length_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "failed_samples": [
+        {
+          "scenario": "happy",
+          "profile": "candidate",
+          "seed": 42,
+          "passed": false,
+          "accepted": true,
+          "success": false,
+          "error": "AssertionError: expected 9, got amr_interfaces.action.ExecuteTransport_Result(run_id='18e2dcb11784a286-7f64f13b', task_id='TASK-cbb6e13733', final_state=10, error_code=203, message='code=6 nav_error=105 ', load_state=1, requires_operator=True, elapsed_sim_s=85.96, elapsed_wall_s=92.617798129)",
+          "collision_count": 0,
+          "truth_valid": false,
+          "physical_stop_verified": false,
+          "elapsed_wall_s": 92.617798129,
+          "elapsed_sim_s": 85.96,
+          "final_state": 10,
+          "error_code": 203,
+          "load_state": 1,
+          "requires_operator": true,
+          "diagnostics": {
+            "mission/readiness": "HOLD",
+            "system/readiness": "READY",
+            "controller_manager: Controllers Activity": "\nHigh execution jitter or mean error : [ diff_drive_controller joint_state_broadcaster ]",
+            "controller_manager: Hardware Components Activity": "All hardware components are active",
+            "controller_manager: Controller Manager Activity": "Controller Manager is running"
+          },
+          "truth_samples": 1942,
+          "box_scan_hits": 0,
+          "observed_real_time_factor": 0.9281153486317297
+        }
+      ]
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 1,
+  "configuration_resolution": [
+    {
+      "context": "warehouse mission",
+      "requested_profile": "candidate",
+      "effective_profile": "candidate",
+      "n": 1
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "protocol": "v10",
+  "baseline_global_cost_scaling": 3.0,
+  "candidate_global_cost_scaling": 40.0,
+  "primary_metric": "sim",
+  "required_p95_reduction": 0.15,
+  "paired_seeds": [
+    42,
+    71
+  ],
+  "target_real_time_factor": 3.0,
+  "allowed_source_revision": "amr_navigation/config/candidate.yaml",
+  "preflight_seed": 45,
+  "staging": [
+    [
+      6.5,
+      12.4
+    ],
+    [
+      7.0,
+      12.4
+    ]
+  ],
+  "timed_goal": [
+    13.0,
+    12.4
+  ],
+  "harness_revision": {
+    "path": "amr_bringup/scripts/scenario_runner",
+    "old_sha256": "da88c84b3b3ce338a865914c3df774b5da5ebb7fe4b97401f947480157e0c11c",
+    "new_sha256": "42adef0c455b8d6494f002560b4149a41d4de988406cb6546ab4719fd09d222d",
+    "allowed_change": "Exact registered narrow coordinates, pure map policy function, effective-profile resolution and metadata; baseline physical control path unchanged."
+  },
+  "baseline_global_obstacle_range": 5.0,
+  "candidate_global_obstacle_range": 1.0,
+  "candidate_regression_before_formal": true,
+  "resource_test_revision": {
+    "path": "amr_navigation/test/test_resources.py",
+    "old_sha256": "5fe481c2b814a2a6ec4f1e3f22f51382ca87b5f8548690ddd53a81ab6dff0c18",
+    "new_sha256": "45ed2c4b906ffa2395eb73d9bd59596175fd3573bfabc0cd2338ab67d93ed0b6",
+    "allowed_change": "Exact global-range assertions plus one pure policy-scope test covering every warehouse regression case."
+  },
+  "candidate_scope": {
+    "scenario": "narrow",
+    "world": "narrow_aisle",
+    "mode": "navigation",
+    "other_scenarios": "baseline"
+  },
+  "required_unit_tests": 43
+}

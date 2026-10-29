@@ -1,0 +1,125 @@
+{
+  "accepted_tasks": 0,
+  "task_outcomes": {},
+  "task_success_rate": null,
+  "navigation_attempts": 6,
+  "navigation_outcomes": {
+    "SUCCEEDED": 5,
+    "FAILED": 1
+  },
+  "navigation_success_rate": 0.8333333333333334,
+  "successful_navigation_sim_s": {
+    "n": 5,
+    "mean": 17.1164,
+    "median": 23.938000000000002,
+    "p95": 29.598
+  },
+  "successful_navigation_wall_s": {
+    "n": 5,
+    "mean": 12.253743188399994,
+    "median": 12.847670413000003,
+    "p95": 20.633306886000014
+  },
+  "admission_rejections": {},
+  "successful_task_sim_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "successful_task_wall_s": {
+    "n": 0,
+    "mean": null,
+    "median": null,
+    "p95": null
+  },
+  "scenario_groups": {
+    "narrow/baseline": {
+      "n": 2,
+      "passed": 1,
+      "succeeded": 1,
+      "seeds": [
+        42,
+        43
+      ],
+      "accepted": 2,
+      "collisions": 0,
+      "unverified_truth": 1,
+      "success_sim_s": {
+        "n": 1,
+        "mean": 29.598,
+        "median": 29.598,
+        "p95": 29.598
+      },
+      "success_wall_s": {
+        "n": 1,
+        "mean": 14.376617875000022,
+        "median": 14.376617875000022,
+        "p95": 14.376617875000022
+      },
+      "controller_cpu_s": {
+        "n": 1,
+        "mean": 3.58,
+        "median": 3.58,
+        "p95": 3.58
+      },
+      "observed_real_time_factor": {
+        "n": 1,
+        "mean": 2.0587595954309212,
+        "median": 2.0587595954309212,
+        "p95": 2.0587595954309212
+      },
+      "minimum_clearance_m": {
+        "n": 0,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "routes": {
+        "bypass": 1,
+        "not_measured": 1
+      },
+      "path_length_m": {
+        "n": 1,
+        "mean": 8.025426712651385,
+        "median": 8.025426712651385,
+        "p95": 8.025426712651385
+      },
+      "failed_samples": [
+        {
+          "scenario": "narrow",
+          "profile": "baseline",
+          "seed": 43,
+          "passed": false,
+          "accepted": true,
+          "success": false,
+          "error": "RuntimeError: narrow navigation failed",
+          "collision_count": 0,
+          "truth_valid": false,
+          "physical_stop_verified": false,
+          "elapsed_wall_s": null,
+          "elapsed_sim_s": null,
+          "diagnostics": {
+            "system/readiness": "READY",
+            "controller_manager: Controllers Activity": "\nHigh execution jitter or mean error : [ diff_drive_controller joint_state_broadcaster ]",
+            "controller_manager: Hardware Components Activity": "All hardware components are active",
+            "controller_manager: Controller Manager Activity": "Controller Manager is running"
+          },
+          "truth_samples": 2138,
+          "box_scan_hits": 0,
+          "observed_real_time_factor": null
+        }
+      ]
+    }
+  },
+  "integrity_problems": [],
+  "event_files": 0,
+  "configuration_resolution": [
+    {
+      "context": "narrow navigation",
+      "requested_profile": "baseline",
+      "effective_profile": "baseline",
+      "n": 2
+    }
+  ]
+}

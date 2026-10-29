@@ -1,0 +1,22 @@
+m0_startup:
+  - startup
+m2_happy_path:
+  - happy
+m3_regression:
+  - happy
+  - crossing
+  - temporary
+  - permanent
+  - device_failure
+  - load_timeout
+  - cancel_pickup
+  - cancel_loaded
+  - cancel_load_window
+  - cancel_unload_window
+  - duplicate
+  - guard_exit
+  - nav_exit
+  - clock_pause
+  - clock_reset
+narrow_aisle:
+  - narrow

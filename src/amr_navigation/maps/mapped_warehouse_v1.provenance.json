@@ -1,0 +1,12 @@
+{
+  "map_id": "mapped_warehouse_v1",
+  "date": "2026-10-27",
+  "source": "slam_toolbox 2.8.5, controlled scan route",
+  "known_spawn_origin_shift_m": [
+    2.0,
+    7.5
+  ],
+  "mapping_geometry_collisions": 0,
+  "saved_map_navigation_successes": 3,
+  "pgm_sha256": "4da244621a1ec63a358f3c6b9de8a9092a62c4c129670db00b3ecbf22c0cc454"
+}

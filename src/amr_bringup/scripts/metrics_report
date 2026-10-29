@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Conservative denominators; missing terminals are INTERRUPTED, never success."""
+import argparse
+from collections import Counter, defaultdict
+import json
+import math
+from pathlib import Path
+import statistics
+
+def stats(values):
+    values=sorted(v for v in values if isinstance(v,(int,float)) and math.isfinite(v))
+    if not values: return {'n':0,'mean':None,'median':None,'p95':None}
+    return {'n':len(values),'mean':statistics.mean(values),'median':statistics.median(values),'p95':values[math.ceil(.95*len(values))-1]}
+
+def analyze(root):
+    tasks={}; nav={}; rejections=Counter(); files=list(Path(root).rglob('events.jsonl')); problems=[]
+    for file in files:
+        sequences={}
+        for line_no,line in enumerate(file.read_text(encoding='utf-8').splitlines(),1):
+            if not line.strip(): continue
+            try: event=json.loads(line)
+            except json.JSONDecodeError as e: problems.append(f'{file}:{line_no}: {e}'); continue
+            run=event['run_id']; seq=event['event_seq']
+            if seq<=sequences.get(run,0): problems.append(f'{file}:{line_no}: non-monotonic event sequence')
+            sequences[run]=seq
+            key=(run,event['task_id']); kind=event['event_type']
+            if kind=='admission_accepted':
+                if key in tasks: problems.append(f'{key}: multiple acceptance events')
+                tasks.setdefault(key,{'outcome':'INTERRUPTED'})
+            elif kind=='admission_rejected': rejections[str(event['error_code'])]+=1
+            elif kind=='terminal':
+                task=tasks.setdefault(key,{'outcome':'INTERRUPTED'})
+                if task['outcome']!='INTERRUPTED': problems.append(f'{key}: multiple terminals')
+                task.update(outcome=event['state'],elapsed_sim_s=event.get('elapsed_sim_s'),elapsed_wall_s=event.get('elapsed_wall_s'))
+            elif kind=='nav_attempt':
+                nav[(run,event['task_id'],event['nav_sequence'])]={'outcome':'UNKNOWN','start_sim':event.get('ros_stamp'),'start_wall':event.get('wall_offset_s')}
+            elif kind=='nav_result':
+                key=(run,event['task_id'],event['nav_sequence'])
+                attempt=nav.setdefault(key,{'outcome':'UNKNOWN'})
+                if 'start_sim' not in attempt: problems.append(f'{key}: result without navigation attempt')
+                if attempt['outcome']!='UNKNOWN': problems.append(f'{key}: duplicate navigation result')
+                attempt['outcome']='SUCCEEDED' if event['detail'].endswith(' success') else 'FAILED'
+                for clock,source in [('sim','ros_stamp'),('wall','wall_offset_s')]:
+                    start=attempt.get('start_'+clock); end=event.get(source)
+                    attempt['elapsed_'+clock+'_s']=end-start if isinstance(start,(int,float)) and isinstance(end,(int,float)) and end>=start else None
+    # Navigation-only smoke runs have no mission admissions; include every leg.
+    for file in Path(root).rglob('navigation_smoke.json'):
+        try: records=json.loads(file.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as error: problems.append(f'{file}: {error}'); continue
+        for i,record in enumerate(records):
+            nav[('smoke',str(file),i)]={'outcome':'SUCCEEDED' if record.get('success') else 'UNKNOWN' if record.get('outcome')=='unknown' else 'FAILED',
+                'elapsed_sim_s':record.get('elapsed_sim_s'),'elapsed_wall_s':record.get('elapsed_wall_s')}
+    outcomes=Counter(t['outcome'] for t in tasks.values()); nav_outcomes=Counter(n['outcome'] for n in nav.values())
+    samples=[]
+    for file in Path(root).rglob('metrics.json'):
+        value=json.loads(file.read_text(encoding='utf-8'))
+        if 'scenario' in value: samples.append(value)
+    groups={}
+    for scenario,profile in sorted({(s['scenario'],s['profile']) for s in samples}):
+        subset=[s for s in samples if s['scenario']==scenario and s['profile']==profile]
+        groups[f'{scenario}/{profile}']={'n':len(subset),'passed':sum(s['passed'] for s in subset),'succeeded':sum(s['success'] for s in subset),
+          'seeds':sorted(s['seed'] for s in subset),
+          'accepted':sum(s.get('accepted',False) for s in subset),'collisions':sum(s.get('collision_count') or 0 for s in subset),
+          'unverified_truth':sum(not s.get('truth_valid') for s in subset),
+          'success_sim_s':stats([s.get('elapsed_sim_s') for s in subset if s['success']]),
+          'success_wall_s':stats([s.get('elapsed_wall_s') for s in subset if s['success']]),
+          'controller_cpu_s':stats([s.get('controller_cpu_s') for s in subset]),
+          'observed_real_time_factor':stats([s.get('observed_real_time_factor') for s in subset]),
+          'minimum_clearance_m':stats([s.get('minimum_clearance_m') for s in subset]),
+          'routes':dict(Counter(s.get('route','not_measured') for s in subset)),
+          'path_length_m':stats([s.get('path_length_m') for s in subset]),
+          'failed_samples':[s for s in subset if not s['passed']]}
+    return {'accepted_tasks':len(tasks),'task_outcomes':dict(outcomes),'task_success_rate':outcomes['COMPLETED']/len(tasks) if tasks else None,
+      'navigation_attempts':len(nav),'navigation_outcomes':dict(nav_outcomes),'navigation_success_rate':nav_outcomes['SUCCEEDED']/len(nav) if nav else None,
+      'successful_navigation_sim_s':stats([n.get('elapsed_sim_s') for n in nav.values() if n['outcome']=='SUCCEEDED']),
+      'successful_navigation_wall_s':stats([n.get('elapsed_wall_s') for n in nav.values() if n['outcome']=='SUCCEEDED']),
+      'admission_rejections':dict(rejections),'successful_task_sim_s':stats([t.get('elapsed_sim_s') for t in tasks.values() if t['outcome']=='COMPLETED']),
+      'successful_task_wall_s':stats([t.get('elapsed_wall_s') for t in tasks.values() if t['outcome']=='COMPLETED']),
+      'scenario_groups':groups,'integrity_problems':problems,'event_files':len(files)}
+
+def comparison(a,b,metric='sim'):
+    p=a['success_'+metric+'_s']['p95']; q=b['success_'+metric+'_s']['p95']
+    improvement=(p-q)/p*100 if p and q else None
+    enough=a['n']>=30 and b['n']>=30 and a['seeds']==b['seeds'] and len(set(a['seeds']))==a['n']
+    safe=all(g['passed']==g['n'] and g['collisions']==0 and g['unverified_truth']==0 for g in (a,b))
+    reliable=b['succeeded']/b['n']>=a['succeeded']/a['n'] if a['n'] and b['n'] else False
+    simulation_gate=True
+    if metric=='wall':
+        sim_a=a['success_sim_s']['p95']; sim_b=b['success_sim_s']['p95']
+        simulation_gate=bool(sim_a and sim_b and sim_b<=sim_a*1.05)
+    return {'improvement_percent':improvement,'paired_sample_gate':enough,'safety_gate':safe,
+        'success_rate_gate':reliable,'simulation_time_gate':simulation_gate,
+        'meets_target':bool(enough and safe and reliable and simulation_gate and improvement is not None and improvement>=15)}
+
+def report(data,compare=None,metric='sim'):
+    lines=['# AMR 实测报告','',f"已接受任务：{data['accepted_tasks']}；终态分布：`{data['task_outcomes']}`。",
+      f"任务成功率：{data['task_success_rate']}；导航尝试：{data['navigation_attempts']}，成功率：{data['navigation_success_rate']}。",'',
+      '缺少终态的已接受任务计为 INTERRUPTED；取消和故障仍计入总分母。成功任务耗时单独统计；故障演练通过不等于运输成功。','',
+      '| 场景 / 配置 | N | 断言通过 | 运输/导航成功 | 碰撞 | 真值未验证 | 仿真 P95 / s | 墙钟 P95 / s |',
+      '|---|---:|---:|---:|---:|---:|---:|---:|']
+    for group,value in data['scenario_groups'].items():
+        lines.append(f"| {group} | {value['n']} | {value['passed']} | {value['succeeded']} | {value['collisions']} | {value['unverified_truth']} | {value['success_sim_s']['p95']} | {value['success_wall_s']['p95']} |")
+    if compare:
+        lines+=['','## 配对配置比较','']
+        scenarios={k.split('/')[0] for k in data['scenario_groups']}
+        for scenario in sorted(scenarios):
+            a=data['scenario_groups'].get(scenario+'/'+compare[0]); b=data['scenario_groups'].get(scenario+'/'+compare[1])
+            if not a or not b: lines.append(f'{scenario}：缺少一组配置数据。'); continue
+            result=comparison(a,b,metric)
+            lines.append(f"{scenario}：{metric} P95 改善 {result['improvement_percent']}%（正值为更快）；N={a['n']}/{b['n']}；配对样本门槛={result['paired_sample_gate']}，安全门槛={result['safety_gate']}，成功率门槛={result['success_rate_gate']}，仿真耗时门槛={result['simulation_time_gate']}，15%目标达成={result['meets_target']}。")
+            lines.append(f"控制器CPU秒均值={a['controller_cpu_s']['mean']}/{b['controller_cpu_s']['mean']}；实际RTF均值={a['observed_real_time_factor']['mean']}/{b['observed_real_time_factor']['mean']}；几何间隙统计={a['minimum_clearance_m']}/{b['minimum_clearance_m']}。仿真耗时与真值路径共同解释导航差异；墙钟还受计算、调度和实际RTF影响，不能单独据此推断实际作业改进。")
+            lines.append(f"路线分类（覆盖完整通道的真值分箱）：{a['routes']}/{b['routes']}；真值路径长度统计={a['path_length_m']}/{b['path_length_m']}。绕行也可完成目标，但不计为实际穿越通道。")
+    if data['integrity_problems']: lines+=['','日志完整性问题：']+['- '+p for p in data['integrity_problems']]
+    failed=[s for g in data['scenario_groups'].values() for s in g['failed_samples']]
+    if failed: lines+=['','失败样本：','```json',json.dumps(failed,ensure_ascii=False,indent=2),'```']
+    return '\n'.join(lines)+'\n'
+
+def main():
+    p=argparse.ArgumentParser(); p.add_argument('--input',default='artifacts'); p.add_argument('--output',default='artifacts/report.md'); p.add_argument('--compare',nargs=2)
+    p.add_argument('--metric',choices=['sim','wall'],default='sim',help='Pre-registered primary P95 clock')
+    args=p.parse_args(); data=analyze(args.input); out=Path(args.output); out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text(report(data,args.compare,args.metric),encoding='utf-8'); out.with_suffix('.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
+    print(out); return 1 if data['integrity_problems'] else 0
+if __name__=='__main__': raise SystemExit(main())

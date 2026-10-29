@@ -1,0 +1,14 @@
+uint8 LOAD=1
+uint8 UNLOAD=2
+uint8 SUCCESS=1
+uint8 FAILURE=2
+string run_id
+string task_id
+string station_id
+string interaction_id
+uint8 operation
+uint8 outcome
+---
+bool accepted
+uint16 reason_code
+string message

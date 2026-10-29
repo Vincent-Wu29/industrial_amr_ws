@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""Isolated, bounded L3 scenarios. Child owns every launched process group."""
+import argparse
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import platform
+import random
+import signal
+import subprocess
+import sys
+import time
+import uuid
+import yaml
+
+def standard_json(value):
+    if isinstance(value,float) and not math.isfinite(value): return None
+    if isinstance(value,dict): return {key:standard_json(item) for key,item in value.items()}
+    if isinstance(value,list): return [standard_json(item) for item in value]
+    return value
+
+def overlay(base,changes):
+    for key,value in changes.items():
+        if isinstance(value,dict): overlay(base.setdefault(key,{}),value)
+        else: base[key]=value
+
+def effective_profile(profile,scenario):
+    return profile if scenario=='narrow' else 'baseline'
+
+
+def stop(process):
+    if not process: return
+    def send(sig):
+        try: os.killpg(process.pid,sig)
+        except ProcessLookupError: pass
+    # A launch parent can exit while a Gazebo child still owns the process group.
+    send(signal.SIGINT)
+    try: process.wait(timeout=12)
+    except subprocess.TimeoutExpired: pass
+    send(signal.SIGTERM)
+    try: process.wait(timeout=4)
+    except subprocess.TimeoutExpired: pass
+    send(signal.SIGKILL)
+    process.wait()
+
+def worker(args):
+    import rclpy
+    from rclpy.node import Node
+    from rclpy.action import ActionClient
+    from rclpy.parameter import Parameter
+    from rclpy.qos import QoSProfile, DurabilityPolicy
+    from std_msgs.msg import Bool, UInt32
+    from nav_msgs.msg import Odometry
+    from geometry_msgs.msg import PoseStamped
+    from nav2_msgs.action import NavigateToPose
+    from amr_interfaces.action import ExecuteTransport
+    from amr_interfaces.msg import TaskSnapshot
+    from amr_interfaces.srv import GetTransport
+    from diagnostic_msgs.msg import DiagnosticArray
+    from ament_index_python.packages import get_package_share_directory as share
+    folder=Path(args.output).resolve(); folder.mkdir(parents=True,exist_ok=True)
+    scenario=args.case; navigation=scenario=='narrow'
+    resolved_profile=effective_profile(args.profile,scenario)
+    params=yaml.safe_load((Path(share('amr_navigation'))/'config/nav2.yaml').read_text())
+    if resolved_profile=='candidate':
+        candidate=yaml.safe_load((Path(share('amr_navigation'))/'config/candidate.yaml').read_text())
+        overlay(params,candidate)
+    params_path=folder/'nav2.yaml'; params_path.write_text(yaml.safe_dump(params),encoding='utf-8')
+    device='failure' if scenario=='device_failure' else 'silent' if scenario in ('load_timeout','cancel_load_window','cancel_unload_window') else 'scripted_success'
+    command=['ros2','launch','amr_bringup','system.launch.py',f'mode:={"navigation" if navigation else "mission"}',
+        f'world:={"narrow_aisle" if navigation else "warehouse"}',f'device_mode:={device}',
+        f'gui:={"false" if args.headless else "true"}',f'artifacts_dir:={folder}',f'params_file:={params_path}',f'seed:={args.seed}',f'real_time_factor:={args.real_time_factor}']
+    hashes={}
+    for package in ['amr_description','amr_simulation','amr_navigation','amr_mission','amr_bringup']:
+        root=Path(share(package))
+        for file in root.rglob('*'):
+            if file.is_file() and file.suffix in ('.yaml','.sdf','.xacro','.xml','.pgm'):
+                hashes[f'{package}/{file.relative_to(root)}']=hashlib.sha256(file.read_bytes()).hexdigest()
+    source_hashes={}
+    for package in ['amr_description','amr_simulation','amr_navigation','amr_mission','amr_bringup','amr_interfaces']:
+        source_root=Path(share(package)).parents[3]/'src'/package
+        if source_root.exists():
+            for file in source_root.rglob('*'):
+                if file.is_file() and '__pycache__' not in file.parts and file.suffix not in ('.pyc',):
+                    source_hashes[f'{package}/{file.relative_to(source_root)}']=hashlib.sha256(file.read_bytes()).hexdigest()
+    manifest={'utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'scenario':scenario,'profile':args.profile,'effective_profile':resolved_profile,'seed':args.seed,
+        'ros_domain_id':os.getenv('ROS_DOMAIN_ID'),'gz_partition':os.getenv('GZ_PARTITION'),'platform':platform.platform(),
+        'cpu_count':os.cpu_count(),'headless':args.headless,'hashes':hashes,'source_hashes':source_hashes,'launch_command':command,
+        'effective_params_sha256':hashlib.sha256(params_path.read_bytes()).hexdigest(),'rmw':rclpy.utilities.get_rmw_implementation_identifier(),
+        'target_real_time_factor':args.real_time_factor,
+        'package_versions':subprocess.run(['dpkg-query','-W','ros-jazzy-nav2-bringup','ros-jazzy-gz-ros2-control','ros-jazzy-ros-gz-sim',
+            'ros-jazzy-rmw-fastrtps-cpp','ros-jazzy-fastrtps','ros-jazzy-rmw-cyclonedds-cpp','ros-jazzy-cyclonedds'],capture_output=True,text=True).stdout}
+    (folder/'manifest.yaml').write_text(yaml.safe_dump(manifest,allow_unicode=True),encoding='utf-8')
+    system_log=(folder/'system.log').open('w'); process=None; obstacle=None; obstacle_log=None; node=None
+    result={'scenario':scenario,'profile':args.profile,'effective_profile':resolved_profile,'seed':args.seed,'passed':False,'accepted':False,'success':False,'error':'',
+            'collision_count':None,'truth_valid':False,'physical_stop_verified':False,'elapsed_wall_s':None,'elapsed_sim_s':None}
+    rclpy.init()
+    try:
+        node=Node('scenario_runner',parameter_overrides=[Parameter('use_sim_time',value=True)])
+        current=[None]; ready=[False,-1e12,-1e12]; truth=[False]; collisions=[None]; odom=[None]; box_scan_hits=[0]; diagnostics={}
+        def readiness(message):
+            now=time.monotonic()
+            if message.data and not ready[0]: ready[1]=now
+            if not message.data: ready[1]=-1e12
+            ready[0]=message.data; ready[2]=now
+        def diagnostic(message):
+            for status in message.status: diagnostics[status.name]=status.message
+        node.create_subscription(DiagnosticArray,'/diagnostics',diagnostic,10)
+        node.create_subscription(TaskSnapshot,'/mission/state',lambda m:current.__setitem__(0,m),QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        node.create_subscription(Bool,'/system/ready',readiness,10)
+        node.create_subscription(Bool,'/ground_truth/valid',lambda m:truth.__setitem__(0,m.data),10)
+        node.create_subscription(UInt32,'/ground_truth/collision_count',lambda m:collisions.__setitem__(0,m.data),10)
+        node.create_subscription(UInt32,'/ground_truth/box_scan_hits',lambda m:box_scan_hits.__setitem__(0,m.data),10)
+        from rclpy.qos import qos_profile_sensor_data
+        node.create_subscription(Odometry,'/odom',lambda m:odom.__setitem__(0,m),qos_profile_sensor_data)
+        process=subprocess.Popen(command,stdout=system_log,stderr=subprocess.STDOUT,start_new_session=True)
+        def spin_until(predicate,timeout):
+            end=time.monotonic()+timeout
+            while not predicate():
+                if process.poll() is not None: raise RuntimeError('system exited; inspect system.log')
+                if time.monotonic()>end: raise TimeoutError('scenario condition deadline')
+                rclpy.spin_once(node,timeout_sec=.05)
+        def wait(future,timeout=15): spin_until(future.done,timeout); return future.result()
+        def system_ready():
+            return ready[0] and time.monotonic()-ready[1]>=.5 and time.monotonic()-ready[2]<.5 and (
+                navigation or (current[0] and current[0].load_state==0 and diagnostics.get('mission/readiness')=='READY'))
+        def start_obstacle():
+            nonlocal obstacle,obstacle_log
+            obstacle_log=(folder/'obstacle_process.log').open('w')
+            obstacle=subprocess.Popen(['ros2','run','amr_simulation','scenario_controller','--scenario',scenario,'--seed',str(args.seed),'--output',str(folder/'obstacles.jsonl')],stdout=obstacle_log,stderr=subprocess.STDOUT,start_new_session=True)
+        # Triggered fixtures wait for the robot; establish their DDS participants
+        # during startup, so obstacle tests do not also inject discovery load.
+        if scenario in ('crossing','temporary'): start_obstacle()
+        spin_until(system_ready,120)
+        if not truth[0]: raise RuntimeError('no valid Gazebo truth; collision assertions unavailable')
+        if scenario=='permanent':
+            start_obstacle(); spin_until(lambda:obstacle.poll() is not None,25)
+            if obstacle.returncode: raise RuntimeError('permanent fixture failed')
+            ready[:]=[False,-1e12,-1e12]
+            spin_until(system_ready,30)
+        if scenario=='startup':
+            result['startup_ready']=True
+        elif navigation:
+            client=ActionClient(node,NavigateToPose,'/navigate_to_pose')
+            navigation_records=[]
+            def controller_cpu():
+                total=0.
+                for entry in Path('/proc').iterdir():
+                    if not entry.name.isdigit(): continue
+                    try:
+                        if os.getpgid(int(entry.name))!=process.pid: continue
+                        if b'/nav2_controller/controller_server' not in (entry/'cmdline').read_bytes(): continue
+                        fields=(entry/'stat').read_text().rsplit(')',1)[1].split()
+                        total+=(int(fields[11])+int(fields[12]))/os.sysconf('SC_CLK_TCK')
+                    except (FileNotFoundError,ProcessLookupError,PermissionError): pass
+                return total
+            def navigate(x,y):
+                goal=NavigateToPose.Goal(); goal.pose.header.frame_id='map'; goal.pose.header.stamp=node.get_clock().now().to_msg()
+                goal.pose.pose.position.x=float(x); goal.pose.pose.position.y=float(y); goal.pose.pose.orientation.w=1.
+                began_wall=time.monotonic(); began_sim=node.get_clock().now().nanoseconds*1e-9
+                record={'x':x,'y':y,'success':False,'outcome':'unknown'}
+                try:
+                    handle=wait(client.send_goal_async(goal)); result['accepted']=result['accepted'] or handle.accepted
+                    if not handle.accepted:
+                        record['outcome']='rejected'; raise RuntimeError('narrow goal rejected')
+                    outcome=wait(handle.get_result_async(),400); record['outcome']=str(outcome.status)
+                    record['success']=outcome.status==4 and outcome.result.error_code==0
+                    if not record['success']: raise RuntimeError('narrow navigation failed')
+                finally:
+                    record.update(elapsed_wall_s=time.monotonic()-began_wall,elapsed_sim_s=node.get_clock().now().nanoseconds*1e-9-began_sim)
+                    navigation_records.append(record)
+                    (folder/'navigation_smoke.json').write_text(json.dumps(navigation_records,indent=2),encoding='utf-8')
+            # Enter via upper bypass first; then traverse the actual narrow passage.
+            navigate(6.5,12.4); navigate(7.,12.4)
+            start_wall=time.monotonic(); start_sim=node.get_clock().now().nanoseconds*1e-9; cpu_start=controller_cpu()
+            navigate(13.,12.4)
+            result.update(success=True,final_state=9,elapsed_wall_s=time.monotonic()-start_wall,
+                          elapsed_sim_s=node.get_clock().now().nanoseconds*1e-9-start_sim,
+                          controller_cpu_s=controller_cpu()-cpu_start)
+            points=[json.loads(line) for line in (folder/'truth.jsonl').read_text().splitlines()]
+            measured=[s for s in points if start_sim<=s['source_sim_s']<=start_sim+result['elapsed_sim_s']]
+            result['path_length_m']=sum(math.hypot(b['x']-a['x'],b['y']-a['y']) for a,b in zip(measured,measured[1:]))
+            corridor=[s for s in measured if 8.3<=s['x']<=11.7 and 12.<=s['y']<=12.8]
+            bins={int((s['x']-8.3)/.1) for s in corridor}
+            result['route']='corridor' if set(range(2,32)).issubset(bins) else 'bypass'
+            if result['route']=='corridor':
+                result['minimum_clearance_m']=min(min(s['y']-12.,12.8-s['y'])-
+                    (.2*abs(math.sin(s['yaw']))+.15*abs(math.cos(s['yaw']))) for s in corridor)
+                assert result['minimum_clearance_m']>0, 'narrow passage has no positive physical clearance'
+        else:
+            client=ActionClient(node,ExecuteTransport,'/mission/execute_transport')
+            task='TASK-'+uuid.uuid4().hex[:10]
+            goal=ExecuteTransport.Goal(task_id=task,source_station='A01',target_station='B02')
+            start_wall=time.monotonic(); handle=wait(client.send_goal_async(goal)); result['accepted']=handle.accepted
+            if not handle.accepted: raise RuntimeError('transport admission rejected')
+            completed=handle.get_result_async()
+            def moving():
+                return current[0] and current[0].state==2 and math.isfinite(current[0].distance_remaining_m) and odom[0] and abs(odom[0].twist.twist.linear.x)+abs(odom[0].twist.twist.angular.z)>.05
+            def control(request):
+                response=subprocess.run(['gz','service','-s','/world/warehouse/control','--reqtype','gz.msgs.WorldControl',
+                    '--reptype','gz.msgs.Boolean','--timeout','3000','--req',request],capture_output=True,text=True,timeout=5)
+                if response.returncode or 'true' not in response.stdout: raise RuntimeError('world control failed: '+response.stdout+response.stderr)
+                with (folder/'clock_fault.jsonl').open('a',encoding='utf-8') as fault_log:
+                    fault_log.write(json.dumps({'request':request,'sim_s':node.get_clock().now().nanoseconds*1e-9,'wall':time.monotonic()})+'\n')
+            if scenario in ('clock_pause','clock_reset'):
+                spin_until(moving,30)
+                control('pause: true' if scenario=='clock_pause' else 'reset: {time_only: true}')
+                result['clock_fault_ack_wall_s']=time.monotonic()
+            if scenario=='duplicate':
+                duplicate=wait(client.send_goal_async(goal)); assert not duplicate.accepted
+            if scenario.startswith('cancel_'):
+                state={'cancel_pickup':2,'cancel_loaded':5,'cancel_load_window':4,'cancel_unload_window':7}[scenario]
+                # Unload cancel case needs independently confirmed loading but silent unloading.
+                if scenario=='cancel_unload_window':
+                    from amr_interfaces.srv import ConfirmOperation
+                    spin_until(lambda:current[0] and current[0].state==4,400)
+                    m=current[0]; c=node.create_client(ConfirmOperation,'/mission/confirm_operation')
+                    response=wait(c.call_async(ConfirmOperation.Request(run_id=m.run_id,task_id=m.task_id,station_id=m.current_station,
+                        interaction_id=m.interaction_id,operation=1,outcome=1))); assert response.accepted
+                spin_until(lambda:current[0] and current[0].state==state,450)
+                if state in (2,5):
+                    spin_until(lambda:current[0] and current[0].state==state and math.isfinite(current[0].distance_remaining_m)
+                        and odom[0] and abs(odom[0].twist.twist.linear.x)+abs(odom[0].twist.twist.angular.z)>.05,30)
+                cancel_start=time.monotonic(); cancel=wait(handle.cancel_goal_async()); assert cancel.goals_canceling
+                result['cancel_requested_wall_s']=cancel_start-start_wall
+            if scenario in ('guard_exit','nav_exit'):
+                spin_until(moving,30)
+                # Signal a specific child PID from /proc, restricted to this process group.
+                target='motion_guard' if scenario=='guard_exit' else 'controller_server'
+                own=[]
+                for entry in Path('/proc').iterdir():
+                    if entry.name.isdigit():
+                        try:
+                            if os.getpgid(int(entry.name))==process.pid and target in (entry/'cmdline').read_bytes().decode(errors='ignore'): own.append(int(entry.name))
+                        except (FileNotFoundError,ProcessLookupError,PermissionError): pass
+                if not own: raise RuntimeError('fault target process not found')
+                for pid in own: os.kill(pid,signal.SIGKILL)
+                spin_until(lambda:process.poll() is not None,20)
+                result['interrupted']=True
+                result['elapsed_wall_s']=time.monotonic()-start_wall
+            else:
+                outcome=wait(completed,920).result
+                result.update(success=outcome.final_state==9,final_state=outcome.final_state,error_code=outcome.error_code,
+                    elapsed_wall_s=outcome.elapsed_wall_s,elapsed_sim_s=outcome.elapsed_sim_s,load_state=outcome.load_state,
+                    requires_operator=outcome.requires_operator)
+                if scenario.startswith('cancel_'): result['cancel_latency_wall_s']=time.monotonic()-cancel_start
+                expected=11 if scenario.startswith('cancel_') else 10 if scenario in ('permanent','device_failure','load_timeout','clock_pause','clock_reset') else 9
+                assert outcome.final_state==expected, f'expected {expected}, got {outcome}'
+                if scenario=='device_failure': assert outcome.error_code==303 and outcome.load_state==2 and outcome.requires_operator
+                if scenario=='load_timeout': assert outcome.error_code==301 and outcome.load_state==2 and outcome.requires_operator
+                if scenario=='permanent': assert outcome.error_code in (203,204,205) and outcome.load_state==1 and outcome.requires_operator
+                if scenario.startswith('cancel_'):
+                    expected_load=0 if scenario=='cancel_pickup' else 1 if scenario=='cancel_loaded' else 2
+                    assert outcome.load_state==expected_load and outcome.requires_operator==(expected_load!=0)
+                if scenario in ('clock_pause','clock_reset'):
+                    assert outcome.requires_operator and outcome.error_code in (400,401,402)
+                    if scenario=='clock_pause':
+                        control('pause: false')
+                        # Physics was frozen: the acceleration limiter can only brake
+                        # once physics advances. FAILED/401 never promised a stop.
+                        settle=time.monotonic()+1
+                        while time.monotonic()<settle: rclpy.spin_once(node,timeout_sec=.05)
+                        result['stop_verification_context']='after diagnostic resume and 1 wall second braking grace'
+                    if scenario=='clock_pause':
+                        retry=ExecuteTransport.Goal(task_id=task+'-new',source_station='A01',target_station='B02')
+                        assert not wait(client.send_goal_async(retry)).accepted, 'clock fault HOLD released unexpectedly'
+                    else:
+                        spin_until(lambda:process.poll() is not None,20)
+                        events=[json.loads(line) for path in folder.rglob('events.jsonl') for line in path.read_text().splitlines()]
+                        assert any(e['event_type']=='clock_reset' and e['error_code']==402 for e in events)
+                        result['scene_invalidated']=True
+                        result['verification_context']='CLOCK_RESET logged, bounded task failure, full stack exited; no post-reset physical claim'
+                if scenario.startswith('cancel_'): assert result['cancel_latency_wall_s']<5.5
+                if scenario=='duplicate':
+                    duplicate=wait(client.send_goal_async(goal)); assert not duplicate.accepted
+        if obstacle and obstacle.poll() is None:
+            spin_until(lambda:obstacle.poll() is not None,30)
+        if obstacle and obstacle.returncode: raise RuntimeError('obstacle injection failed')
+        if scenario in ('crossing','temporary'):
+            result['box_scan_hits']=box_scan_hits[0]
+            assert box_scan_hits[0]>=3, 'moving fixture not verified in actual LiDAR scans'
+        # World teardown invalidates further physical observations.
+        teardown=scenario in ('guard_exit','nav_exit','clock_reset')
+        if teardown:
+            samples=[json.loads(line) for line in (folder/'truth.jsonl').read_text().splitlines()]
+            assert samples and max(s['collision_count'] for s in samples)==0
+            result.update(collision_count=0,truth_valid=False,physical_stop_verified=False,passed=True)
+            return 0
+        # Observe fresh odometry after the terminal result before closing this system.
+        observe_start=time.monotonic(); end=observe_start+1
+        while time.monotonic()<end: rclpy.spin_once(node,timeout_sec=.05)
+        result.update(collision_count=collisions[0],truth_valid=truth[0])
+        assert truth[0] and collisions[0]==0, 'invalid truth or collision detected'
+        if scenario not in ('guard_exit','nav_exit'):
+            assert odom[0] is not None, 'missing stop odometry'
+            assert abs(odom[0].twist.twist.linear.x)<.02 and abs(odom[0].twist.twist.angular.z)<.05
+            samples=[json.loads(line) for line in (folder/'truth.jsonl').read_text().splitlines()]
+            stopped=[s for s in samples if s.get('wall_s',0)>=observe_start]
+            assert len(stopped)>=5, 'insufficient fresh truth for stop verification'
+            def drift(points):
+                return max(math.hypot(p['x']-points[0]['x'],p['y']-points[0]['y']) for p in points)
+            assert drift(stopped)<.03, 'physical motion after reported terminal'
+            assert max(abs(math.remainder(s['yaw']-stopped[0]['yaw'],2*math.pi)) for s in stopped)<.05
+            result['physical_stop_verified']=True
+        result['passed']=True
+    except Exception as e:
+        result['passed']=False
+        result['error']=f'{type(e).__name__}: {e}'
+        if 'diagnostics' in locals(): result['diagnostics']=diagnostics
+    finally:
+        stop(obstacle); stop(process)
+        # Failed semantic assertions must still retain physical evidence.
+        truth_file=folder/'truth.jsonl'
+        if truth_file.exists():
+            samples=[json.loads(line) for line in truth_file.read_text().splitlines() if line.strip()]
+            if samples:
+                result['collision_count']=max(s['collision_count'] for s in samples)
+                result['truth_samples']=len(samples)
+        if 'box_scan_hits' in locals(): result['box_scan_hits']=box_scan_hits[0]
+        if obstacle_log: obstacle_log.close()
+        if node: node.destroy_node()
+        rclpy.try_shutdown(); system_log.close()
+        sim,wall=result.get('elapsed_sim_s'),result.get('elapsed_wall_s')
+        result['observed_real_time_factor']=sim/wall if isinstance(sim,(float,int)) and isinstance(wall,(float,int)) and wall>0 else None
+        result=standard_json(result)
+        (folder/'metrics.json').write_text(json.dumps(result,indent=2,allow_nan=False),encoding='utf-8')
+        print(json.dumps(result,allow_nan=False),flush=True)
+    return 0 if result['passed'] else 1
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument('--suite',choices=['m0_startup','m2_happy_path','m3_regression','narrow_aisle'],default='m2_happy_path')
+    p.add_argument('--repeat',type=int,default=1); p.add_argument('--seed',type=int,default=42)
+    p.add_argument('--headless',action='store_true'); p.add_argument('--profile',choices=['baseline','candidate'],default='baseline')
+    p.add_argument('--output',default='artifacts'); p.add_argument('--case',default='happy'); p.add_argument('--worker',action='store_true')
+    p.add_argument('--real-time-factor',type=float,default=1.0)
+    p.add_argument('--domain-id',type=int,help='Fixed domain for isolated startup diagnostics')
+    p.add_argument('--cases',nargs='+',help='Run only selected cases from the registered suites')
+    p.add_argument('--fail-fast',action='store_true')
+    args=p.parse_args()
+    if args.worker: return worker(args)
+    from ament_index_python.packages import get_package_share_directory
+    suites=yaml.safe_load((Path(get_package_share_directory('amr_bringup'))/'config/suites.yaml').read_text())
+    if args.repeat<1: p.error('repeat must be positive')
+    if args.domain_id is not None and not 0<=args.domain_id<=232: p.error('domain must be in 0..232')
+    cases=args.cases or suites[args.suite]
+    valid={case for suite in suites.values() for case in suite}
+    if any(case not in valid for case in cases): p.error('unknown scenario in --cases')
+    root=Path(args.output).resolve()/(time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'_'+uuid.uuid4().hex[:6]); root.mkdir(parents=True)
+    failed=0; runs=0; rng=random.Random(args.seed)
+    for repeat in range(args.repeat):
+        for case in cases:
+            folder=root/f'{repeat:03d}_{case}_{args.profile}'; env=os.environ.copy()
+            # Avoid Linux's ephemeral UDP port interval in generated DDS domains.
+            env['ROS_DOMAIN_ID']=str(args.domain_id if args.domain_id is not None else rng.randrange(30,90))
+            env['GZ_PARTITION']='amr_'+uuid.uuid4().hex
+            command=[sys.executable,__file__,'--worker','--case',case,'--seed',str(args.seed+repeat),'--profile',args.profile,'--output',str(folder),'--real-time-factor',str(args.real_time_factor)]
+            if args.headless: command.append('--headless')
+            print(f'RUN {case} {repeat+1}/{args.repeat} -> {folder}',flush=True)
+            child=subprocess.Popen(command,env=env,start_new_session=True)
+            try:
+                child.wait(timeout=1500); failed+=child.returncode!=0; runs+=1
+            except (subprocess.TimeoutExpired,KeyboardInterrupt):
+                stop(child); raise
+            if failed and args.fail_fast: break
+        if failed and args.fail_fast: break
+    print(f'{runs-failed} passed, {failed} failed; artifacts: {root}')
+    return 1 if failed else 0
+if __name__=='__main__': sys.exit(main())

@@ -1,0 +1,7 @@
+# Preserve source/evidence hashes; keep executable scripts compatible with Linux.
+* -text
+*.sh text eol=lf
+*.py text eol=lf
+src/**/scripts/* text eol=lf
+*.png binary
+*.pgm binary

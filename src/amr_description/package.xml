@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>amr_description</name><version>0.1.0</version>
+  <description>Industrial AMR description subsystem</description>
+  <maintainer email="maintainer@example.com">AMR contributors</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>xacro</depend><depend>robot_state_publisher</depend><depend>launch_ros</depend>
+  
+  <test_depend>ament_cmake_pytest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

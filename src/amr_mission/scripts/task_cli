@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import sys
+import time
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from rclpy.qos import QoSProfile, DurabilityPolicy
+from rosidl_runtime_py.convert import message_to_ordereddict
+from amr_interfaces.action import ExecuteTransport
+from amr_interfaces.msg import TaskSnapshot
+from amr_interfaces.srv import GetTransport, ConfirmOperation, ReconcileLoad
+from action_msgs.srv import CancelGoal
+
+def wait(node,future,timeout=10):
+    rclpy.spin_until_future_complete(node,future,timeout_sec=timeout)
+    if not future.done(): raise TimeoutError('request deadline')
+    return future.result()
+
+def call(node,kind,name,req):
+    c=node.create_client(kind,name)
+    if not c.wait_for_service(timeout_sec=10): raise TimeoutError(name+' unavailable')
+    return wait(node,c.call_async(req))
+
+def main():
+    p=argparse.ArgumentParser(description='Submit/query/confirm/targeted cancel transport tasks')
+    sub=p.add_subparsers(dest='command',required=True)
+    submit=sub.add_parser('submit'); submit.add_argument('--task-id',required=True); submit.add_argument('--source',default='A01'); submit.add_argument('--target',default='B02'); submit.add_argument('--timeout',type=float,default=920)
+    for command in ['status','cancel','confirm-current']:
+        s=sub.add_parser(command); s.add_argument('--task-id',required=True)
+        if command=='confirm-current': s.add_argument('--operation',choices=['LOAD','UNLOAD'],required=True); s.add_argument('--outcome',choices=['SUCCESS','FAILURE'],required=True)
+    reconcile=sub.add_parser('reconcile'); reconcile.add_argument('--load',choices=['EMPTY','LOADED'],required=True); reconcile.add_argument('--note',required=True)
+    args=p.parse_args(rclpy.utilities.remove_ros_args()[1:]); rclpy.init(); node=Node('task_cli')
+    def print_msg(m): print(json.dumps(message_to_ordereddict(m),ensure_ascii=False,default=list))
+    try:
+        if args.command=='submit':
+            heartbeat=[None]
+            node.create_subscription(TaskSnapshot,'/mission/state',lambda m:heartbeat.__setitem__(0,(time.monotonic(),m.run_id)),QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL))
+            c=ActionClient(node,ExecuteTransport,'/mission/execute_transport')
+            if not c.wait_for_server(timeout_sec=30): raise TimeoutError('mission action unavailable')
+            g=wait(node,c.send_goal_async(ExecuteTransport.Goal(task_id=args.task_id,source_station=args.source,target_station=args.target)))
+            if not g.accepted: raise RuntimeError('goal rejected; see /mission/events for admission reason')
+            original=call(node,GetTransport,'/mission/get_transport',GetTransport.Request(task_id=args.task_id))
+            if not original.found or list(original.snapshot.transport_goal_uuid.uuid)!=list(g.goal_id.uuid):
+                raise RuntimeError('task association lost; outcome UNKNOWN; inspect run logs before retrying')
+            expected_run=original.snapshot.run_id; pending=g.get_result_async(); watch_started=time.monotonic(); deadline=watch_started+args.timeout
+            while not pending.done():
+                rclpy.spin_once(node,timeout_sec=.2)
+                if time.monotonic()>deadline: raise TimeoutError('task result deadline; outcome UNKNOWN')
+                if heartbeat[0] is None and time.monotonic()-watch_started>2:
+                    raise RuntimeError('mission heartbeat unavailable; outcome UNKNOWN; inspect task via query service')
+                if heartbeat[0] and (time.monotonic()-heartbeat[0][0]>2 or heartbeat[0][1]!=expected_run):
+                    raise RuntimeError('mission heartbeat lost or run changed; outcome UNKNOWN; full stack inspection required')
+            result=pending.result()
+            if result.result.task_id!=args.task_id or result.result.run_id!=expected_run:
+                raise RuntimeError('invalid result association; outcome UNKNOWN')
+            print_msg(result.result)
+            return 0 if result.result.final_state==9 else 1
+        if args.command=='reconcile':
+            state=[]
+            node.create_subscription(TaskSnapshot,'/mission/state',lambda m:state.append(m),QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL))
+            deadline=time.monotonic()+10
+            while not state and time.monotonic()<deadline: rclpy.spin_once(node,timeout_sec=.2)
+            if not state: raise TimeoutError('mission state unavailable')
+            result=call(node,ReconcileLoad,'/mission/reconcile_load',ReconcileLoad.Request(run_id=state[-1].run_id,load_state=0 if args.load=='EMPTY' else 1,operator_note=args.note))
+            print_msg(result); return 0 if result.accepted else 1
+        query=call(node,GetTransport,'/mission/get_transport',GetTransport.Request(task_id=args.task_id))
+        if not query.found: raise RuntimeError('UNKNOWN task ID in current run')
+        m=query.snapshot
+        if args.command=='status': print_msg(m); return 0
+        if args.command=='cancel':
+            req=CancelGoal.Request(); req.goal_info.goal_id=m.transport_goal_uuid
+            response=call(node,CancelGoal,'/mission/execute_transport/_action/cancel_goal',req); print_msg(response)
+            return 0 if response.return_code==0 and response.goals_canceling else 1
+        required=4 if args.operation=='LOAD' else 7
+        if m.state!=required or not m.interaction_id: raise RuntimeError('task is not waiting for requested operation')
+        req=ConfirmOperation.Request(run_id=m.run_id,task_id=m.task_id,station_id=m.current_station,interaction_id=m.interaction_id,
+            operation=1 if args.operation=='LOAD' else 2,outcome=1 if args.outcome=='SUCCESS' else 2)
+        response=call(node,ConfirmOperation,'/mission/confirm_operation',req); print_msg(response)
+        return 0 if response.accepted else 1
+    except Exception as e: print(str(e),file=sys.stderr); return 2
+    finally: node.destroy_node(); rclpy.try_shutdown()
+if __name__=='__main__': sys.exit(main())

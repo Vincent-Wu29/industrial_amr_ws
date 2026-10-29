@@ -1,0 +1,213 @@
+{
+  "complete_and_consistent": true,
+  "issues": [],
+  "stages": {
+    "m3_happy": {
+      "n": 30,
+      "passed": 30,
+      "counts": {
+        "('happy', 'baseline')": 30
+      },
+      "effective_profiles": {
+        "baseline": 30
+      },
+      "normal_sampling_audit": {
+        "n": 30,
+        "passed": 30,
+        "success_rate": 1.0,
+        "required_success_rate": 0.95,
+        "registered_seeds": [
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71
+        ],
+        "source_versions": 1,
+        "failed_samples": [],
+        "physical_stop_unverified_seeds": [],
+        "middleware": [
+          "rmw_cyclonedds_cpp"
+        ],
+        "issues": [],
+        "meets_target": true
+      }
+    },
+    "m3_regression": {
+      "n": 75,
+      "passed": 75,
+      "counts": {
+        "('cancel_load_window', 'baseline')": 5,
+        "('cancel_loaded', 'baseline')": 5,
+        "('cancel_pickup', 'baseline')": 5,
+        "('cancel_unload_window', 'baseline')": 5,
+        "('clock_pause', 'baseline')": 5,
+        "('clock_reset', 'baseline')": 5,
+        "('crossing', 'baseline')": 5,
+        "('device_failure', 'baseline')": 5,
+        "('duplicate', 'baseline')": 5,
+        "('guard_exit', 'baseline')": 5,
+        "('happy', 'baseline')": 5,
+        "('load_timeout', 'baseline')": 5,
+        "('nav_exit', 'baseline')": 5,
+        "('permanent', 'baseline')": 5,
+        "('temporary', 'baseline')": 5
+      },
+      "effective_profiles": {
+        "baseline": 75
+      }
+    },
+    "m4_preflight": {
+      "n": 2,
+      "passed": 2,
+      "counts": {
+        "('narrow', 'baseline')": 1,
+        "('narrow', 'candidate')": 1
+      },
+      "effective_profiles": {
+        "baseline": 1,
+        "candidate": 1
+      }
+    },
+    "m4": {
+      "n": 60,
+      "passed": 60,
+      "counts": {
+        "('narrow', 'baseline')": 30,
+        "('narrow', 'candidate')": 30
+      },
+      "effective_profiles": {
+        "baseline": 30,
+        "candidate": 30
+      }
+    },
+    "m4_regression": {
+      "n": 15,
+      "passed": 15,
+      "counts": {
+        "('cancel_load_window', 'candidate')": 1,
+        "('cancel_loaded', 'candidate')": 1,
+        "('cancel_pickup', 'candidate')": 1,
+        "('cancel_unload_window', 'candidate')": 1,
+        "('clock_pause', 'candidate')": 1,
+        "('clock_reset', 'candidate')": 1,
+        "('crossing', 'candidate')": 1,
+        "('device_failure', 'candidate')": 1,
+        "('duplicate', 'candidate')": 1,
+        "('guard_exit', 'candidate')": 1,
+        "('happy', 'candidate')": 1,
+        "('load_timeout', 'candidate')": 1,
+        "('nav_exit', 'candidate')": 1,
+        "('permanent', 'candidate')": 1,
+        "('temporary', 'candidate')": 1
+      },
+      "effective_profiles": {
+        "baseline": 15
+      }
+    }
+  },
+  "source_versions": 2,
+  "common_source_versions": 1,
+  "allowed_source_revision": "amr_navigation/config/candidate.yaml",
+  "exact_harness_revision": {
+    "path": "amr_bringup/scripts/scenario_runner",
+    "old_sha256": "da88c84b3b3ce338a865914c3df774b5da5ebb7fe4b97401f947480157e0c11c",
+    "new_sha256": "42adef0c455b8d6494f002560b4149a41d4de988406cb6546ab4719fd09d222d",
+    "allowed_change": "Exact registered narrow coordinates, pure map policy function, effective-profile resolution and metadata; baseline physical control path unchanged."
+  },
+  "exact_resource_test_revision": {
+    "path": "amr_navigation/test/test_resources.py",
+    "old_sha256": "5fe481c2b814a2a6ec4f1e3f22f51382ca87b5f8548690ddd53a81ab6dff0c18",
+    "new_sha256": "45ed2c4b906ffa2395eb73d9bd59596175fd3573bfabc0cd2338ab67d93ed0b6",
+    "allowed_change": "Exact global-range assertions plus one pure policy-scope test covering every warehouse regression case."
+  },
+  "registration": {
+    "protocol": "v10",
+    "baseline_global_cost_scaling": 3.0,
+    "candidate_global_cost_scaling": 40.0,
+    "primary_metric": "sim",
+    "required_p95_reduction": 0.15,
+    "paired_seeds": [
+      42,
+      71
+    ],
+    "target_real_time_factor": 3.0,
+    "allowed_source_revision": "amr_navigation/config/candidate.yaml",
+    "preflight_seed": 45,
+    "staging": [
+      [
+        6.5,
+        12.4
+      ],
+      [
+        7.0,
+        12.4
+      ]
+    ],
+    "timed_goal": [
+      13.0,
+      12.4
+    ],
+    "harness_revision": {
+      "path": "amr_bringup/scripts/scenario_runner",
+      "old_sha256": "da88c84b3b3ce338a865914c3df774b5da5ebb7fe4b97401f947480157e0c11c",
+      "new_sha256": "42adef0c455b8d6494f002560b4149a41d4de988406cb6546ab4719fd09d222d",
+      "allowed_change": "Exact registered narrow coordinates, pure map policy function, effective-profile resolution and metadata; baseline physical control path unchanged."
+    },
+    "baseline_global_obstacle_range": 5.0,
+    "candidate_global_obstacle_range": 1.0,
+    "candidate_regression_before_formal": true,
+    "resource_test_revision": {
+      "path": "amr_navigation/test/test_resources.py",
+      "old_sha256": "5fe481c2b814a2a6ec4f1e3f22f51382ca87b5f8548690ddd53a81ab6dff0c18",
+      "new_sha256": "45ed2c4b906ffa2395eb73d9bd59596175fd3573bfabc0cd2338ab67d93ed0b6",
+      "allowed_change": "Exact global-range assertions plus one pure policy-scope test covering every warehouse regression case."
+    },
+    "candidate_scope": {
+      "scenario": "narrow",
+      "world": "narrow_aisle",
+      "mode": "navigation",
+      "other_scenarios": "baseline"
+    },
+    "required_unit_tests": 43
+  },
+  "middleware": [
+    "rmw_cyclonedds_cpp"
+  ],
+  "unit_summary": "Summary: 43 tests, 0 errors, 0 failures, 0 skipped",
+  "m2_first_ten_passed": true,
+  "m4_comparison": {
+    "improvement_percent": 41.33325274990934,
+    "paired_sample_gate": true,
+    "safety_gate": true,
+    "success_rate_gate": true,
+    "simulation_time_gate": true,
+    "meets_target": true
+  },
+  "overall_acceptance_passed": true
+}

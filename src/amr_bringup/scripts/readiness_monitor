@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Physical readiness is independent of mission load/slot state."""
+import math
+import time
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data, QoSProfile, DurabilityPolicy
+from rclpy.time import Time
+from rosgraph_msgs.msg import Clock
+from sensor_msgs.msg import LaserScan, Imu
+from nav_msgs.msg import Odometry, OccupancyGrid
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from std_msgs.msg import Bool
+from lifecycle_msgs.srv import GetState
+from controller_manager_msgs.srv import ListControllers
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
+from tf2_ros import Buffer, TransformListener
+
+def stamp(msg): return msg.sec + msg.nanosec*1e-9
+
+class Readiness(Node):
+    def __init__(self):
+        super().__init__('readiness_monitor')
+        self.mapping=self.declare_parameter('mapping',False).value
+        self.seen={}; self.life={}; self.pending={}; self.controllers=False; self.controllers_seen=-1e12
+        self.clock_value=0.; self.clock_advance=-1e12; self.amcl=False; self.map=False
+        self.tf=Buffer(); self.listener=TransformListener(self.tf,self)
+        self.create_subscription(Clock,'/clock',self.clock,10)
+        self.create_subscription(LaserScan,'/scan',lambda m:self.sensor('scan',m),qos_profile_sensor_data)
+        self.create_subscription(Imu,'/imu',lambda m:self.sensor('imu',m),qos_profile_sensor_data)
+        self.create_subscription(Odometry,'/odom',lambda m:self.sensor('odom',m),qos_profile_sensor_data)
+        self.create_subscription(PoseWithCovarianceStamped,'/amcl_pose',self.pose,10)
+        self.create_subscription(OccupancyGrid,'/map',self.map_cb,QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self.pub=self.create_publisher(Bool,'/system/ready',10)
+        self.physical_pub=self.create_publisher(Bool,'/system/physical_ready',10)
+        self.localized_pub=self.create_publisher(Bool,'/system/localization_ready',10)
+        self.diag=self.create_publisher(DiagnosticArray,'/diagnostics',10)
+        names=['slam_toolbox'] if self.mapping else ['map_server','amcl','controller_server','planner_server','behavior_server','bt_navigator','collision_monitor']
+        self.lifecycle_clients={n:self.create_client(GetState,f'/{n}/get_state') for n in names}
+        self.control=self.create_client(ListControllers,'/controller_manager/list_controllers')
+        self.timer=self.create_timer(.2,self.tick,clock=rclpy.clock.Clock(clock_type=rclpy.clock.ClockType.STEADY_TIME))
+        self.last_query=0.
+        self.last_report=None
+    def clock(self,m):
+        value=stamp(m.clock)
+        if value>self.clock_value: self.clock_advance=time.monotonic()
+        if value<self.clock_value: self.amcl=False
+        self.clock_value=value
+    def sensor(self,name,m): self.seen[name]=(time.monotonic(),stamp(m.header.stamp))
+    def pose(self,m): self.amcl=all(math.isfinite(v) for v in m.pose.covariance) and m.pose.covariance[0]<.5 and m.pose.covariance[7]<.5
+    def map_cb(self,m): self.map=m.info.width>0 and m.info.height>0 and m.info.resolution>0
+    def ask(self,name,client,request):
+        if name in self.pending:
+            future,started=self.pending[name]
+            if not future.done() and time.monotonic()-started<2: return
+            if not future.done(): client.remove_pending_request(future)
+            self.pending.pop(name,None)
+        if not client.service_is_ready(): return
+        future=client.call_async(request); self.pending[name]=(future,time.monotonic())
+        def done(f):
+            try:
+                result=f.result()
+                if name=='controllers':
+                    self.controllers=all(any(c.name==n and c.state=='active' for c in result.controller) for n in ('joint_state_broadcaster','diff_drive_controller'))
+                    self.controllers_seen=time.monotonic()
+                else: self.life[name]=(result.current_state.id==3,time.monotonic())
+            except Exception: self.life[name]=(False,time.monotonic())
+        future.add_done_callback(done)
+    def tick(self):
+        w=time.monotonic(); s=self.get_clock().now().nanoseconds*1e-9; reasons=[]
+        if w-self.last_query>.5:
+            for name,client in self.lifecycle_clients.items(): self.ask(name,client,GetState.Request())
+            self.ask('controllers',self.control,ListControllers.Request()); self.last_query=w
+        if s<=0 or w-self.clock_advance>.6: reasons.append('clock stalled')
+        for name,wall_limit,sim_limit in [('scan',1.,1.),('imu',1.,1.),('odom',.5,.5)]:
+            receive,source=self.seen.get(name,(-1e12,0.))
+            if w-receive>wall_limit or not -.05<=s-source<sim_limit: reasons.append(name+' stale')
+        if not self.controllers or w-self.controllers_seen>2: reasons.append('controllers inactive/stale')
+        try:
+            odom_tf=self.tf.lookup_transform('odom','base_footprint',Time())
+            if not -.1<=s-stamp(odom_tf.header.stamp)<.5: reasons.append('odom TF stale')
+            self.tf.lookup_transform('base_footprint','laser_link',Time())
+        except Exception: reasons.append('odom/sensor TF missing')
+        physical=not reasons; self.physical_pub.publish(Bool(data=physical))
+        if not self.map: reasons.append('map missing')
+        if not self.mapping and not self.amcl: reasons.append('AMCL not initialized')
+        try:
+            tf=self.tf.lookup_transform('map','base_footprint',Time())
+            if not -.4<=s-stamp(tf.header.stamp)<.8: reasons.append('TF stale')
+            self.tf.lookup_transform('base_footprint','laser_link',Time())
+        except Exception: reasons.append('TF missing')
+        localized=not reasons; self.localized_pub.publish(Bool(data=localized))
+        for name in self.lifecycle_clients:
+            active,received=self.life.get(name,(False,-1e12))
+            if not active or w-received>2: reasons.append(name+' inactive/stale')
+        self.pub.publish(Bool(data=not reasons))
+        report='; '.join(reasons) if reasons else 'READY'
+        if report!=self.last_report:
+            self.get_logger().info(report); self.last_report=report
+        d=DiagnosticStatus(name='system/readiness',hardware_id='sim_amr',level=DiagnosticStatus.WARN if reasons else DiagnosticStatus.OK,message='; '.join(reasons) if reasons else 'READY')
+        self.diag.publish(DiagnosticArray(status=[d]))
+
+def main():
+    rclpy.init(); node=Readiness()
+    try: rclpy.spin(node)
+    except KeyboardInterrupt: pass
+    finally: node.destroy_node(); rclpy.try_shutdown()
+if __name__=='__main__': main()

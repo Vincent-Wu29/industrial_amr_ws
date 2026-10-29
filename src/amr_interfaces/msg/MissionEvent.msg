@@ -1,0 +1,9 @@
+builtin_interfaces/Time stamp
+string run_id
+string task_id
+unique_identifier_msgs/UUID request_goal_uuid
+uint64 event_seq
+string event_type
+uint8 state
+uint16 error_code
+string detail

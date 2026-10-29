@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>amr_mission</name><version>0.1.0</version>
+  <description>Industrial AMR mission subsystem</description>
+  <maintainer email="maintainer@example.com">AMR contributors</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend><depend>rclcpp_action</depend><depend>amr_interfaces</depend><depend>nav2_msgs</depend><depend>nav_msgs</depend><depend>sensor_msgs</depend><depend>geometry_msgs</depend><depend>std_msgs</depend><depend>std_srvs</depend><depend>diagnostic_msgs</depend><depend>tf2</depend><depend>tf2_ros</depend><depend>ament_index_cpp</depend><depend>yaml_cpp_vendor</depend><depend>rclpy</depend><depend>action_msgs</depend><depend>rosidl_runtime_py</depend><depend>python3-yaml</depend>
+  
+  <test_depend>ament_cmake_pytest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

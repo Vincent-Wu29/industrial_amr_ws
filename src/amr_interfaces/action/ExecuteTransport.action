@@ -1,0 +1,21 @@
+string task_id
+string source_station
+string target_station
+---
+string run_id
+string task_id
+uint8 final_state
+uint16 error_code
+string message
+uint8 load_state
+bool requires_operator
+float64 elapsed_sim_s
+float64 elapsed_wall_s
+---
+string run_id
+uint8 state
+string current_station
+string interaction_id
+uint8 load_state
+float64 elapsed_sim_s
+float32 distance_remaining_m
